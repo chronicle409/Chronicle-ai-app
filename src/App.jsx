@@ -1,17 +1,33 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 const AUDD_TOKEN = "c961a8e99fb0b8fd0e59ea4dd83d4e2e";
-const LOGO = "data:image/png;base64,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";
+const LOGO = "data:image/png;base64,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";
 
 export default function App(){
   const [status,setStatus]=useState('idle');
   const [result,setResult]=useState(null);
+  const [menuOpen,setMenuOpen]=useState(false);
+  const [history,setHistory]=useState([]);
   const recRef=useRef(null);
   const streamRef=useRef(null);
+
+  useEffect(()=>{
+    const h = JSON.parse(localStorage.getItem('findora_history')||'[]');
+    setHistory(h);
+  },[]);
+
+  const saveHistory=(song)=>{
+    const h = JSON.parse(localStorage.getItem('findora_history')||'[]');
+    const newH = [song, ...h.filter(s=>s.title!==song.title)].slice(0,50);
+    localStorage.setItem('findora_history', JSON.stringify(newH));
+    setHistory(newH);
+  };
+
   const getMime=()=>{
     const t=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus',''];
     for(const x of t){ if(x===''||MediaRecorder.isTypeSupported(x)) return x; }
     return '';
   };
+
   const start=async()=>{
     try{
       setStatus('listening');
@@ -36,37 +52,86 @@ export default function App(){
         try{
           const r=await fetch('https://api.audd.io/',{method:'POST',body:fd});
           const d=await r.json();
-          console.log(d);
-          if(d.result){ setResult(d.result); } else { setResult({title: d.error?.error_message || 'No match', artist:'Try louder, closer to speaker', album:''}); }
-        }catch(err){ setResult({title:'Network error', artist:'Check internet', album:''}); }
+          if(d.result){
+            setResult(d.result);
+            saveHistory(d.result);
+          } else {
+            setResult({title: d.error?.error_message || 'No match', artist:'Try louder, closer to speaker', album:''});
+          }
+        }catch{ setResult({title:'Network error', artist:'Check internet', album:''}); }
         setStatus('found');
       };
       rec.start();
       setTimeout(()=>{ if(recRef.current?.state==='recording') recRef.current.stop(); },6000);
-    }catch(e){ alert('Allow microphone!'); setStatus('idle'); }
+    }catch(e){ alert('Allow microphone permission!'); setStatus('idle'); }
   };
+
   const stop=()=>{ if(recRef.current?.state==='recording') recRef.current.stop(); else { if(streamRef.current) streamRef.current.getTracks().forEach(t=>t.stop()); setStatus('idle'); } };
+
   if(status==='found' && result){
     const art = result.spotify?.album?.images?.[0]?.url || result.apple_music?.artwork?.url?.replace('{w}x{h}','600x600') || 'https://via.placeholder.com/600';
-    return(<div style={{height:'100dvh',width:'100vw',position:'fixed',inset:0,background:'#121212',overflowY:'auto',color:'white',fontFamily:'system-ui'}}><div style={{height:'55vh',position:'relative'}}><img src={art} style={{width:'100%',height:'100%',objectFit:'cover'}}/><div style={{position:'absolute',inset:0,background:'linear-gradient(to bottom, transparent 40%, #121212 100%)'}}/><button onClick={()=>setStatus('idle')} style={{position:'absolute',top:12,left:12,background:'rgba(0,0,0,0.5)',border:'none',borderRadius:20,width:36,height:36,color:'white',fontSize:20}}>←</button></div><div style={{padding:20}}><div style={{fontSize:28,fontWeight:800}}>{result.title}</div><div style={{color:'#aaa',marginTop:6}}>{result.artist}</div><button onClick={()=>setStatus('idle')} style={{width:'100%',background:'#0091EA',color:'white',border:'none',padding:14,borderRadius:12,fontWeight:700,marginTop:24}}>Find Another Song</button></div></div>);
+    return(
+      <div style={{height:'100dvh',width:'100vw',position:'fixed',inset:0,background:'#121212',overflowY:'auto',color:'white',fontFamily:'system-ui'}}>
+        <div style={{height:'55vh',position:'relative'}}><img src={art} style={{width:'100%',height:'100%',objectFit:'cover'}}/><div style={{position:'absolute',inset:0,background:'linear-gradient(to bottom, transparent 40%, #121212 100%)'}}/><button onClick={()=>setStatus('idle')} style={{position:'absolute',top:12,left:12,background:'rgba(0,0,0,0.5)',border:'none',borderRadius:20,width:36,height:36,color:'white',fontSize:20}}>←</button></div>
+        <div style={{padding:20}}><div style={{fontSize:28,fontWeight:800}}>{result.title}</div><div style={{color:'#aaa',marginTop:6}}>{result.artist}</div><button onClick={()=>setStatus('idle')} style={{width:'100%',background:'#0091EA',color:'white',border:'none',padding:14,borderRadius:12,fontWeight:700,marginTop:24}}>Find Another Song</button></div>
+      </div>
+    );
   }
-  if(status==='searching'){ return(<div style={{height:'100dvh',width:'100vw',position:'fixed',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',background:'radial-gradient(ellipse at 50% -10%, #7ED8FF 0%, #2EB6FF 15%, #009CFF 50%, #007AFF 100%)',color:'white',fontFamily:'system-ui'}}><div style={{width:80,height:80,border:'4px solid rgba(255,255,255,0.3)',borderTop:'4px solid white',borderRadius:40,animation:'spin 0.8s linear infinite'}}/><div style={{marginTop:20,fontWeight:800}}>Searching ANY music...</div><style>{`@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}`}</style></div>); }
+
+  if(status==='searching'){
+    return(<div style={{height:'100dvh',width:'100vw',position:'fixed',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',background:'radial-gradient(ellipse at 50% -10%, #7ED8FF 0%, #2EB6FF 15%, #009CFF 50%, #007AFF 100%)',color:'white',fontFamily:'system-ui'}}><div style={{width:80,height:80,border:'4px solid rgba(255,255,255,0.3)',borderTop:'4px solid white',borderRadius:40,animation:'spin 0.8s linear infinite'}}/><div style={{marginTop:20,fontWeight:800}}>Searching ANY music...</div><style>{`@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}`}</style></div>);
+  }
+
   return(
     <div style={{height:'100dvh',width:'100vw',position:'fixed',inset:0,display:'flex',flexDirection:'column',background:'radial-gradient(ellipse at 50% -10%, #9FE0FF 0%, #6ED0FF 12%, #2EB6FF 35%, #009CFF 65%, #007AFF 100%)',overflow:'hidden',fontFamily:'system-ui'}}>
       <div style={{position:'absolute',top:-50,left:-50,width:300,height:300,background:'rgba(255,255,255,0.22)',borderRadius:'50%',filter:'blur(40px)'}}/>
       <div style={{position:'absolute',top:100,right:-80,width:400,height:400,background:'rgba(100,200,255,0.28)',borderRadius:'50%',filter:'blur(50px)'}}/>
-      <div style={{height:56,display:'flex',justifyContent:'space-between',alignItems:'center',padding:'0 18px',position:'relative',zIndex:2}}><div style={{display:'flex',alignItems:'center',gap:8,color:'white'}}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2"><circle cx="11" cy="11" r="6"/><line x1="16" y1="16" x2="21" y2="21" strokeLinecap="round"/></svg><span style={{fontSize:16,fontWeight:600}}>Search</span></div><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></div>
-      <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',position:'relative',zIndex:2}}><div onClick={status==='idle'?start:undefined} style={{width:'min(68vw, 320px)',height:'min(68vw, 320px)',cursor:status==='idle'?'pointer':'default',position:'relative',display:'flex',alignItems:'center',justifyContent:'center'}}>{status==='listening'&&<><div style={{position:'absolute',inset:-12,borderRadius:'50%',background:'rgba(255,255,255,0.22)',animation:'p 1.4s infinite'}}/><div style={{position:'absolute',inset:-32,borderRadius:'50%',background:'rgba(255,255,255,0.12)',animation:'p 1.4s infinite 0.5s'}}/></>}<img src={LOGO} alt="logo" style={{width:'100%',height:'100%',objectFit:'contain',filter:'drop-shadow(0 0 22px rgba(255,255,255,0.95)) drop-shadow(0 0 55px rgba(255,255,255,0.6))'}}/></div></div>
-      <div style={{height:90,display:'flex',justifyContent:'center',alignItems:'flex-start',position:'relative',zIndex:2}}>{status==='listening'&&<button onClick={stop} style={{display:'flex',alignItems:'center',gap:10,background:'rgba(255,255,255,0.18)',border:'1.5px solid white',borderRadius:40,padding:'11px 28px',color:'white',fontSize:16,fontWeight:700,backdropFilter:'blur(10px)'}}><div style={{width:16,height:16,background:'white',borderRadius:2}}/>Stop</button>}{status==='idle'&&<div style={{color:'white',fontSize:13,opacity:0.9}}>Tap to find • Works with any music</div>}</div>
+      <div style={{height:56,display:'flex',justifyContent:'space-between',alignItems:'center',padding:'0 18px',position:'relative',zIndex:2}}>
+        <div style={{display:'flex',alignItems:'center',gap:8,color:'white'}}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2"><circle cx="11" cy="11" r="6"/><line x1="16" y1="16" x2="21" y2="21" strokeLinecap="round"/></svg><span style={{fontSize:16,fontWeight:600}}>Search</span></div>
+        <button onClick={()=>setMenuOpen(true)} style={{background:'none',border:'none',padding:0}}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+      </div>
+
+      {menuOpen && (
+        <div style={{position:'fixed',inset:0,zIndex:50,display:'flex'}}>
+          <div onClick={()=>setMenuOpen(false)} style={{flex:1,background:'rgba(0,0,0,0.4)'}}/>
+          <div style={{width:'85%',maxWidth:340,background:'#0f0f0f',height:'100%',overflowY:'auto',padding:'20px 16px',color:'white'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24}}>
+              <div style={{fontSize:22,fontWeight:800}}>My Music</div>
+              <button onClick={()=>setMenuOpen(false)} style={{background:'rgba(255,255,255,0.15)',border:'none',borderRadius:20,width:36,height:36,color:'white',fontSize:20}}>×</button>
+            </div>
+            <div style={{background:'#1e1e1e',borderRadius:12,padding:12,display:'flex',gap:10,alignItems:'center',marginBottom:20}}>
+              <div style={{width:40,height:40,background:'#2EB6FF',borderRadius:20,display:'flex',alignItems:'center',justifyContent:'center'}}>♪</div>
+              <div><div style={{fontWeight:700}}>Findora</div><div style={{fontSize:12,color:'#aaa'}}>{history.length} songs found</div></div>
+            </div>
+            <div style={{fontSize:13,fontWeight:800,letterSpacing:1,marginBottom:12,color:'#aaa'}}>RECENT SEARCHES</div>
+            {history.length===0 ? (
+              <div style={{color:'#666',fontSize:14,padding:'20px 0'}}>No songs yet. Tap logo to find music!</div>
+            ) : history.map((song,i)=>(
+              <div key={i} onClick={()=>{setResult(song); setMenuOpen(false); setStatus('found');}} style={{display:'flex',gap:12,padding:'12px 0',borderBottom:'1px solid #222',cursor:'pointer'}}>
+                <img src={song.spotify?.album?.images?.[1]?.url || 'https://via.placeholder.com/60'} style={{width:56,height:56,borderRadius:8,objectFit:'cover'}}/>
+                <div style={{flex:1}}><div style={{fontWeight:700,fontSize:14}}>{song.title}</div><div style={{fontSize:12,color:'#999'}}>{song.artist}</div></div>
+              </div>
+            ))}
+            {history.length>0 && <button onClick={()=>{localStorage.removeItem('findora_history'); setHistory([]);}} style={{width:'100%',background:'#222',color:'#aaa',border:'none',padding:12,borderRadius:10,marginTop:20,fontSize:13}}>Clear History</button>}
+            <div style={{marginTop:30,padding:12,background:'linear-gradient(135deg, #2EB6FF, #007AFF)',borderRadius:12}}>
+              <div style={{fontWeight:800}}>Search any music</div><div style={{fontSize:12,marginTop:4,opacity:0.9}}>Tap logo, play music near phone, find in 6s</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',position:'relative',zIndex:2}}>
+        <div onClick={status==='idle'?start:undefined} style={{width:'min(68vw, 320px)',height:'min(68vw, 320px)',cursor:status==='idle'?'pointer':'default',position:'relative',display:'flex',alignItems:'center',justifyContent:'center'}}>
+          {status==='listening'&&<><div style={{position:'absolute',inset:-12,borderRadius:'50%',background:'rgba(255,255,255,0.22)',animation:'p 1.4s infinite'}}/><div style={{position:'absolute',inset:-32,borderRadius:'50%',background:'rgba(255,255,255,0.12)',animation:'p 1.4s infinite 0.5s'}}/></>}
+          <img src={LOGO} alt="logo" style={{width:'100%',height:'100%',objectFit:'contain',filter:'drop-shadow(0 0 22px rgba(255,255,255,0.95)) drop-shadow(0 0 55px rgba(255,255,255,0.6))'}}/>
+        </div>
+      </div>
+      <div style={{height:90,display:'flex',justifyContent:'center',alignItems:'flex-start',position:'relative',zIndex:2,flexDirection:'column',alignItems:'center',gap:6}}>
+        {status==='listening'&&<button onClick={stop} style={{display:'flex',alignItems:'center',gap:10,background:'rgba(255,255,255,0.18)',border:'1.5px solid white',borderRadius:40,padding:'11px 28px',color:'white',fontSize:16,fontWeight:700,backdropFilter:'blur(10px)'}}><div style={{width:16,height:16,background:'white',borderRadius:2}}/>Stop</button>}
+        {status==='idle'&&<><div style={{color:'white',fontSize:13,opacity:0.9}}>Tap to find • 6s recognition</div><div style={{color:'white',fontSize:11,opacity:0.6,marginTop:2}}>Works with any music</div></>}
+      </div>
       <div style={{height:44,display:'flex',justifyContent:'center',alignItems:'center',gap:8,position:'relative',zIndex:2}}><div style={{width:8,height:8,borderRadius:50,background:status==='idle'?'white':'rgba(255,255,255,0.4)'}}/><div style={{width:8,height:8,borderRadius:50,background:status==='listening'?'white':'rgba(255,255,255,0.4)'}}/><div style={{width:8,height:8,borderRadius:50,background:status==='found'?'white':'rgba(255,255,255,0.4)'}}/></div>
       <style>{`@keyframes p{0%{transform:scale(0.9);opacity:1}100%{transform:scale(1.5);opacity:0}}`}</style>
     </div>
   );
-}
-"""
-
-final = code.replace("PLACEHOLDER", b64)
-print(final)
-</atem:parameter>
-</atem:invoke>
-</atem:function_calls>
+      }
