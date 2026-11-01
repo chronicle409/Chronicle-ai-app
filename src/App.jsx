@@ -1,6 +1,5 @@
 import { useState, useRef } from 'react';
 const AUDD_TOKEN = "c961a8e99fb0b8fd0e59ea4dd83d4e2e";
-const LOGO = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAAdbklEQVR4nO2deZisRXXG35qZuwCXHcIeFkV2EFkuWyTwAK4giCBq2ER4Ai4gwYCaAAliFJQ9gooQcAEBCYoiyGIuIIuKLBoQUDTJBb1wEUG2y0z3L39UnVvV33zd0zPT+633eebpnu7q7zt16v1OnTpVdUrKyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMgYaLhuCzCIAJrWq3OOdsqypCETehoIxLU/2atzbmwS1xhJ/w2v1XCdTPZJIhO6SZSQF+dctU7ZWZJG5AmKpDmSXpU0plryL2pEfmA4+beaCT4xMqEbABiS11EpeYGVJK0maS1Ja0jaSd66bi9pKXkyVyWtKOklSaN2PUlDkl6Q9At58i+QdFe49GOSnnTOvVYij+o9SBmZ0OMQLPGQCiQGlpe0kaT9JL1B0mxJm0haWdJyLRbjWUlPSHpcnuSPSnrQOfdMi+8zcMiEVg2JXeoCABtJ2lXSAZLWk7RBKFdEtfBaLGNWuQzVpIy1R9k95ku6XdIFku6Roo+dLXfEEk1oI7JzrpJ8tp6kHSXtK+nt8v5vikry3ojXaj2S/Nn1U5K/yTl3f/Cxq5nYESMTFxk8FIhcAWZL+jt5H3hPSWsnxavyxDILOqz2I7XWCvcfk2+vn0l6HBi2BxF4s6RR59zd4f9xD2rGAAJwaeQAWB04FXiIWlSAMaBK92FyVIGz8DK7IP9s4LxQrgJ8Dti4UN8y9yWj30ES7wU2BE4BnioQZ5TeILFhNHl/dJDdyLwB8OPwXSUp9zJwBTA3qe8wk5jsyehhpI0JLAecBCxMCDBWIEQvwCwywK+Avw3yzw6v2wN/CN+npB9L3leA7wGbprroSiNkTB/AEEl3CxwLPJo0eK9ZY0OFKNdVwCpB/pHwejCwIHw/VvL7auHzF/EP8VKJXrK17idQ6yfvQeyajQS9SGSIRKwA7w3ypw/lWUnZiXqVIrEfBvZLrpV9634A0ZKtB1xYIEuvuRYpjHz/A7wz1GFWeJ0LXBu+rzC5ehSJ/Tmi67JERrn6AiQuBnAQ0cesUN419wpSwt0NbBLqYKTbEZgfvh8t+X2zSB+Em4HXJXrLLkgvgVoX4xNJI06HAJ1Aamn/iTh4nRlePwb8JXzfqrrYdZ4CPpzoLbsgvQACmYGNgB8mROll9wIisZ4HPmp1IfYyn03KtrouaY91JXHgmaMg3QTRXz4yEKPYWL2INCT3c2CLUAezyiswdX95snLYQ3UPsHK4fyZ1N0C0ZEfhJxOg910Me9iqwDnAsqEONvjbG7i9ULbdeC28fhdYI8iRSd0p4KdzZ4T3xyUN06uhOIMR52ngrUl9rJc5MCnT6QfTHp75wI5BnkzqdoNkNA6cljRGL5O5SnQb7ga2CvLPJA4CP5OU7ZbLZPd9BtgmyJVJ3S4QXYwV8bFUiyv3CplT4hrS/7+M3ySQuhhzgOuS33e7LkbqBcAbg4yZ1K0GYdUYPgpwc1B6r0QxikQ2K2tuw5+A9yd1MTJvDvwslOmlXiZ1PzYIsmZStwokSyCBrwZlv1bSEN1A6h78Hj+9nOJRYPMg+wixHh/Ad+3QmwNZq9et+A0Pk0rNkNEAxDjzqQVldxOpr/sscAHeFZoD7It3I84DVguyW0huCPhQ8tteqEs92IN2C7AMeUZx+iBGAPZNlNztrjkl4Y+AdSeog0VkVsGTA6Kbkr72IqwnPD7Uoeddj55dnAIMOefGgLUlfUF+L5+lFegWqvJbsF6TdIyky51zo3hXwvb/2XvbBjUKbCnpy5J2UNxKVVVtfcbC/700BT0sr/f/7rYgfQ1iOGsZ/Gwa9M4g8JfA201OStZAUBte3IW4ocC6cbPyC/EDw3RMYIupul1fk/GmUI8h8pauyYMY0ZgNfKug3G7B7n9jImdp70bYIQMsjY8vv5xcI/W9bwa2wNdzT3xc/d7CfSvJX6fdErvnnlavpI6Z1M2COAg8OSi2F6IAFiN+Ar9oaFM8aV1B9nTf4vUlvzdcSgjfFX8PHAZ8B7/1qohOhffsofsx0cA4/MM6N8iaB4gTgRjW2hK/dagXBoFleIS4pckVZN8EP1iEKH8l+f+LSX3t4R0mDB6T75YG9sGv7XiUWj20c1e6yfsq8KYgiw3OTwx1ODStc0YdWMMCtwXldtvVSJHK8u4gr1kuI/V+wJ8L5Y10fyH63qW7sIlWcKigk2WA3fCW/bkSuVpJbnv4Lgz3NzKvn9z7eWAzk7n9zOhDEK3VMUlD9QpMlt8Cewc5izk+jiwpb+R4DNg6lGvKqhWvn3y+DrA/cA3eiqYYZXrkNtdoAbBakGFmeD04lFkUXu+lsBE5I4Dop62H31PXC+saoNZd+C/iVPAQ8QGcDVwdyhQHb9Z1712oa40VnoR+hgufb4z3uc/Er+JLMRXLbQ/i6eH6I8Te5zbioNbKfcj0MX0WDBCI/ud1BcV2E6kMZxEnSEaI3fBG+BV0UD/MVgF+CnwK2K5YbyZP7tLfBFnOAC6hNu+I1WUinZoReRrfC7iknvvhrX+lUPYp/OxonkU0EC3dO4ldZjeR7uT4E/DxVFbiw7c98Hgo12wk5hXgJ8AJhNVsybXNcjdNDCK5i5Z7g3CP7xN38hjqWW7T+4eTupp1vqtQBiK5rzBZpkiBwUFoRAeslJCjmxMKqctwPbU7o9Nd5UcQfclmHsCynecV4Ab82o6tS3QzVXIXLffr8P79t0vksgkcI/hvgGWpdam2xbtNZe1idbI0ZUs2qROlvTtp5G4hHch9NpWR2sHfdDavFn1QwyK85T4WWIvamUYjaivIvRNwPH48ULTcAPsndbYIzhUF/aSw+j+Bdz2WXLeDONCZAdzZQGmdgLkMT1Ibkkst1XLUH/xNFWXkfhE/ADuMsHE10dkwrSP3WviUD3cCL1A7xW1kXifI02iQXsE/kDubjNPlRl+CSJR3UL7boxNI73s/fhHR4tF9IuNW1E6WtEuOIrmfAm7C62hOUX9MjdzjpuzxPvdK4X1a708HORoZGvvuAuqEGpcIBOXOJOad67R1Tu93OnEnSQ1JgMOJpO+EjEbu4gP+CPAN/C73NQq6nHS6XOoMQonjmhXxPRbEHqmelbaB9HbWtlNnRh+CaAG2pnXd92RgVvZFwjRukCcd+C1NbRambvUgZRGJp/BrXQ4A1izqlkkSiiTsRqz/meFezdTbHvRvsCSuyCMS+oKCQtqN1MW4g7hWwXxGi7vOxnf10DsL8M0lKbo8zwCfB/6asDMmqdOkyR1+Ows/u1klLm29ijh4L8L08zRxl86SMUAkWoDNgZcKCpkuimGo4neGzwArBjnMXzYyr0RM9tKri6Osi0/rtACfAekk4PVFndMEuanNQZ2eaFDBz0ruHu5VZrXts/3Taw08iAQ6JCigFda50SzdKLV55I5KZKmZ4cKvbnuwhXJ1AmW5PF7ED2KPIcTSkzrWdQmIkadbw3VMb/OBlfEPDDSOSd+Aj1wtcRa6VYv3U+Wegk9wfjZ+TUiK+4Edwr2LUYwZwL/UuWa/oF6k5Dn8jOHh+HMXrR2Kg0HTxdtKrnUi/rAiI3ijwWEF2Da95sCCSOaN8NPK01mElCr8ScLSzOReK+J9vovw3fDS4XPrVq0BZwHfDNfpha1PrUC9CZzngR/g15vXbFAg6sMMjbkbi/BkbqZHNVfvNJaEEF6itM83oZxGSH93DnEgUrq2Ibm/PVBG6g2J3Wgv7IxpB8rI/SCxl0p3pKSGxsrfju/Bbgz/NxOT/naq706iozdMDoLcRVq8M3oysAMoh+XPwj7QOXecc24B/iDKqnOu4pyrEOOsI9QutBkOu8n3lD9He678zuaR5B6DdBKrHRY6LK+7qqQHwqsLp9Da6/skraja03Kvkj/j/C2Ku97rwXa87wFs4pyrdprUHbtZQqiZklbQ5MlcCb8ZkfQtSX/jnLvarEzx1FTnHIHcY+G7ISM8cKSkayWtoviASKGRFRvGTpEdBKCYguGLdnxyaJcqfibyQEVDMyTpOUlfkrR3co1GcPI6W0nSIeHagzk4JHb3uzJ539m6sj8DH0yu2VRoiOjqrEtcjwG1/nJ6j+IGVVsL3IshvGZh9ft6QSf2elShHPgY9JeIZ7w0U3/T089bzaGeQqK4j5Uorh5S4v8C2D5co+mtP0R/eVd8/jm7d9o45j8/gD9xajZ+Fm4e47c59Us4rwjTpUV6LN2Cw9f3YVqzpsb0+hgxofvgWWnigC2NKDRCJXm9jnhkQtMBe2KvsAeRmMX7GpnvJwwuC9fYCn+gzz3UPgT9FBExOW8AliLqxUh9RKFciqnsUbTyc9N2GBgQ/efViac6NVKSffcs8LbkOk2Fgahd9nk8vusssz5G7stIzhih/sKdnYH/pDbTUat3XbcD5gYs7uFSfeJ3k7cy2brp49jJtFvfgEjotYgLyxutr63iD85ZfOYHTXZbqfLwe+zsXun90sa7LClfltZr3AJ7fO6NY4lpytKG7DVfu+g7G5nN3dgMvx6klRuT7Z5X1dNrX4NoCfZnYj/NlPEVkjXANEHo5D4rUOvaFHdiG44L5ZvyyRk/VT6Cn0W7gfK9e912SUzXrwBvojbXtunqylC2lWMDu9atDGKqg0R5B4aKNtvQC/BLEi1peF3FEAd/W+L94VSxRUUvImx+ZQo7lilZKI9PwXB0uHcxetItYlt9TyvoyHrMVak9cbdVSF3GVdN7DgSIhP5kQdHNKAX8+t+1KM8nl65h3oW4KL0482f3fBZ4cyg/UrzeJOtVz9feCT+Qfaxw/06u3jMX4kXgDaarQnscTHt2C1kdXyKsH2FACX1ZqGgz08zpro1b8KGlcWRO3n+M+pnx7X7XEU+haulAhXKrvTTwz4yPa3fC1zYdfDXVFdF3nkEcA7QjFGltd0A79N1VEAl9cajkRIQeTV5PJ5weVbimdZ+rEh+UorVJB38XEpPFtFW5FLIc4R/GI4Oc86lFu6x2BW8hN6fWd7bXHfGhzHY9VKb34zqh846CSOivhUrWI3RKwP8D3pJco2YwFl43JOZUbkSMfy/K0qF6j1txhve1T8QnTl+UyNhKX9uuc2m4Z9qTjeAfuAsTvbUDdt3LOq33toNI6EsaKDFtzG8Da9lvSfa7Uev/Wcqretd7hbCgn0mE/tpQ/8ULpZLPhoHtgHPxg99U7um4AKbHp4G1qc2Oaqvq1idmSW2XhbY2udjq2w3dtxyJMmfhdy6nSjdYAy4Ezkh+W5o1Hj9Z0mgntn12fkGWrpE6kaHMaq+DX0P8aEk9Jks4G3t8Ilw71aEZg8Npf+oII/QlRTn6GtSel1K2yMXI9ziwRyhbzJFsLsbaRLdlom314CMaZ+N3YcxIrtcrxC762nPwvvad1K4haXYQaWV+hzcgqXW2weCawB+T8u2CEfqicP+BI/QM4KFEkWkU41ZglVCuGCkwq7IO0YJNZSB1N35iZ9nk2osPw+wmKLfaW+Gt9h8L9WhktU2fJ4ZrlFnnE5LrtBPp5Mq0wqM9BSKhZxJdjnQtxLXACqFM2gDpnr+9gF+H8pMZxNggM7VEjwLHEbZkheuPy73cDVAS1wbWAD6CD13+JalHcQ2JEehevHVOc22koTobRLd7ssfkuZJB2o6VKHMW/ggzU+TDBBfDyhV/E96fSv348mRQzEb0CP5A+V0K8nbdHQlylCU43wJ/PPTCQt3GiEbi/aFsmXXeO9FFu2Ft9X2mmB+kZ0H0gS1ePI/kYHQKZA6vs/H+rzVAK0Na6YMxhj9i7SBqoxA95Y4UdLQ+8B48udM1JPPC98XEjJYUc15S53bD2uun4d7jZnn7FkSS7oXfiV2zWyItF/5WJW7KbOfEQ9F9eQC/Q3yFRKbF2Tg7qrQSUG61d8IPIm8GXk8h7wZxImXrUMdOTb2bbu3wocFwOeqhjCDEOOnFBeXUy/HWKpT52acBGxfk64lGIVptMwx1HzYioS9K6toJdCVs11GrE5TrJFXDLuOyMk7SxpIOkbSTpNdJWisp0s4zv21TrCn/FUm3SDpD0r3OudEg43CjOnQS+DPRq0Fvzja/hu9MR6tI+o2k5aQp7bafCuxM80ucc0fgd9tXJvrRQCNYolXwRwd/BZ8zwtDOgU3RHani9zQeSWGwRY+4I2UgWvCP1NFZO92PwZwpnAqoE+bBD4ZOxi+JhPZ3n2WuzkPAvxIShCey9UR0xECcuFmf8gmtdue8Hty1HNMBBX8xfLY7MS7dKZ+wGGl5HE/sHRh/8mvXiU20zvsk8hfRzmxR1i4npPJkJCBZc4yfJv56BxqmiKI7UsHvCD+IHiE2MVq0Oj4Ckj6M1uucio9rn5183mo9ARxo+uiGLvoCROszQuNTmtqJsrDfnfhtWCunstLheDZRP4cGuUw3KWk3DmW2oPVkTnes2JngHdFB1ycOpoKQzmtIPuJxsKTvyEcmOpmTbkh+FG8pw6qSdpZPnfUzfNhv3ZCOrEp34tlbBvkMFsX5nqQnw2e7yUc92hGBqEp6NrzvekSo50GMsc4hZkXq5k7r4izkk/hzDecW5G7bLCRRJ1vh14OnqxJNN+8IZZbBL0dIv2uVHgB+i09r3LFZwr600IZg+Yadcy9KOlbtsTKTwZB8T2FZUteU9ElJPwGuwW/inRkSSFZpjzti5PmApNmKCSgt/vyCpCdDmd0kbRvKtFIOs8aPOeeek0+U2REL3deElha7HyPOue9KOke+Tt0mtmVJTdP/7i/pDkl34U8L2DpxR+rmtJ4MiFlYl5H0nkQWKRL7POfcA4Fglm201WSzB+iWFl93yQAxfdfm9OZBP2VptqrA+SRnoDBNP5uoh8PDPdLIBvj4/cahzPaMd0lajU2tXq1q64nQ9xZaWpxI3Ul6WNIP1L5BzlRhScclbylN3o9Iug8fqXlryF9ddc7B1MJ+Nh1/WPFzeYt5n6TfhDLvkndJTJZWwQbmv5X0x/C+YwPCgSB0gK1juFS9PaI2P1vyZFpe0kGSfohPKbYrMCO4I5jVnuiixFDdXEnbqXbNhiUevzycXrCUpF0TedqBPzvn/iT55PNtusc4DBKhzTLcJ2mh4uCsl2EyVuTlf5ukH0u6F584Z2Wz2k1YawJx/kHSUiofDN4QrrONfIgRtZ4DpvN5dGGnysAQOlgzJ9/N/Tp83A9npZg7YoNZJ2lrSedKegj4DjA3qd84BAsOsI28K5GehWLE/pFz7g+B9JaiuNVumT0gz0s6P9yro0ZlYAgd4JxzY/Jng/Qjin72mpLeLel6YJ0GpDbrfLqkmaol0ZCkUUnnBIu5iaQPqnaZbKtgvcGjihM3mdDTgNXnjvDa6y5HPZifXZUP+9W1dPhQHfjp9m1U60aYBb7dOfeTQPo3S1pd0XK3EibjA865UfwcQSZ0C9BLEY7pwKzo+c65+fjF/EWCWBvuKb+Qv2wweK60eG/ne9W+B93cpm+26fpNCTCI6AffeSIYMZ+XdHFpgXgk23KSTil8bbN/v5J0cyi7uaQdwvetbnuz+PdLuoeSo/Y6gUEl9LITF+l5mOtwpaQFwToXH1Sz2LvLb1tLp7DNCl/hnHs1lPuoaiMgrZbX7veaWu+fN4WmT5TqE5hF2Dm8dn2h/RRhhHtc0snhszI3gRAWO76kzJC8/31TiIKsJOmtal+obkg+wnRN+KwrveTAWWhglvxJtf0Mczc+65x7RiWLe8KAqypP0r9ReajuRufcfaHchvJRE6n1D7qFG7/rnPtf/NqaTOjpwEb78o1m6Qf6sX42EFwo6RbzkxuUf294TcsYYTcFdgNWl59mb8c55mad08Fg16JLg+RyDAMV+dQHy8sruB+3/Zh1PjlENsZt/w/+dAVYV9I+4eO0rkboDSTdKj9LuHxJuVbAeoaLJd1psrX4Hk2jHy1YPVSChT5CMVzVb7BB3UJJVzWwzla3fRUf3tIJl/D5uCM9WgSzzi9IOr0X8pQMBKEtPotPvDhXnUum0i4c45x7Vn7ms+g7u2Cd58i7EVL9utrn7SKa+erfdM79PvHru4aBILRiw31c0tJqT1iq3TArO885d3WdMJ0k2eq7oyS9XjGTVCO0K8uUkzRf0ilN+PodQd8TOoyoK8Bu8use0tF+v8FJ+mLyvgbJZMUsSUfXK9dBDEk6sV4kplsC9S2CFRsDVpQnQtcVOkXYQ3ijpB80GFhZe20naW21fi9gs1i8gk/SlaHH6Lp1lvqY0KGLI6xPOFN+yWU7Jg3aDXsIRyWdNIEPamX/UX63SbceYBt0H2Py9oJ1lvo0bGehLGCmfI6Jt6h/w3Rmna91zj1YFqaTauq8k/x65nYs/2wGpudTJf2+nrzdQl9Zs7DPznzmEUn/pv4ms+Qt3SuSvtBk+f3k260bXbw9fI9LOjMQuSdcDUPfWOh09Rawu/xi9h3U32S2HMrXOOfubWCdbVXdUpLeET7u9GDQZhkXSTrOOfdyr1lnqY8IHeLMO0h6n/yqMdvZ3a9ktlj5K5K+MsGeQZsZPEDSJurOYLAiz5djnHM39CKZpT4gNDFD/aclfcY+Vn+H56Qo/6XOuTsnIAjAbEmHqjsDwVFJMyRdL+mysMKvp1wNQz/50O8Kr4vkLVs/yV6EWdj5kk5vFPZKZt/2ll/33OlITkWezLfJ946j6pHjOMrQF6QI3fG58t2zpdjqZ5i7ca5z7imVTHEXyko+d0end1FbL/JLSX/vnHtJPTKBUg99MT2chKwOkXSZYr64vpC/AJuU+IOkLRR2qJeRJHG3tpF0l7yl7FSdrRd5VtJ2zrnf9arfnKIvLHQg87Ckr0s6W95KW3qrfoNZ5y+FzEKNLJ6dOXi8/AM8Ku8CjIW/imKSmlbqwsj8vKR9+oXMUp9ZuMRifVDS1xQbsV/qYS7DQnnr/IwKR7EtLhjTE6wmfyTbnCauPyZPxOkYKiPzC/JkntcvZJb6IMpRAKGhLwkx2fPD591a0zBZmE96kXPu6UZESZLKPC/py5L+StI81T6820taUX571cbyi5akqZ/laGHQlyS9J5B5hgvnM2a0ASH7jx0cdCgR3czc3wwq+LS1dwLL0cLjKYBZwBuBTxFPB4PJnTtjZZ/AT1wtPqM9owMgkvpw4LnQGJ08DWuyMMIcGuRuOoZOzBs9UvgbdwIAsDL+LMcFhfs2gunt18AGk5Uvo0Ugknpb4uGS7TwTfKow63w3sBQtPjyIeMhmepbj2sDV4f71SF0lkvkRQvJ1smXuHoh5kdcAvpU0VC+5IEaao4OsbSMMtS7ZTODycO+iPlKSXwUsH37TD2ORwQa1lukkYFFJo3ULJsOdwGw6dLRbeh/g9CDDa9Ra5eeAE4AZ9pt2y5XRJEi6XPzRyT8PjdbtM1fMBdo7yNYx35Raa31WQa778dvWFp882ym5MiaBpAHfANyeNGA3iG3W+R5gBl2wgET/ejZwHbAQOMNkIfvLvQ+ipXbA+4BnA7HKTqNqJyr4bn6vVK4u6MMl71dL3mcXo19QaMTNgPOIA6Mx2j9otOvfRpMH/7RbH0SfutNHNGe0AhQOrQHeCdyVkG6M9lnsSvjbKdy7J6xhJvIAIFgk862HgcPw51AbbOTfKh/brPO1dOEkqIwlBKmVBFYCjgBuKpBxlDgRMhXYyazPEWfdesI6ZwwoihYT2BP4D+DlAjnN154Muc2FubzsXhntxRLrT+F9ySEl24mALeXTIuwlaUf5Q+ANtua40fYvWx76svxJrferzvLQjIy2Ae9XF632JsDxwB3AqyWWuIJ3T8xFsf8BLrbrdqdGSy6WWAtdhuDrDinmmrbPt5K0vuLxDxup/o7zMUlvlPSIJGXr3FlkQtdBILdTYYczPi/z+pI2k7Sp/D6/HSStGv6Odc5dSf10uBkZ3QVhnUgjFwKYA6wR3mdD0SVkxU8Sgazpn5S4KNkyZwwEyCvWMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMnoU/w+1EOChPWB7iQAAAABJRU5ErkJggg==";
 
 export default function App(){
   const [status,setStatus]=useState('idle');
@@ -23,11 +22,16 @@ export default function App(){
         if(streamRef.current) streamRef.current.getTracks().forEach(t=>t.stop());
         if(ch.length===0){setStatus('idle');return;}
         const fd=new FormData(); fd.append('file',f); fd.append('api_token',AUDD_TOKEN); fd.append('return','spotify,apple_music');
-        try{ const r=await fetch('https://api.audd.io/',{method:'POST',body:fd}); const d=await r.json(); setResult(d.result||{title:"No match",artist:"Try again"}); }catch{ setResult({title:"Error",artist:"Check net"}); }
+        try{
+          const r=await fetch('https://api.audd.io/',{method:'POST',body:fd});
+          const d=await r.json();
+          const res=d.result||{title:"No match",artist:"Try again",album:"",spotify:null};
+          setResult(res);
+        }catch{ setResult({title:"Error",artist:"Check net",album:""}); }
         setStatus('found');
       };
       rec.start();
-      setTimeout(()=>{if(recRef.current?.state==='recording') recRef.current.stop();},10000);
+      setTimeout(()=>{if(recRef.current?.state==='recording') recRef.current.stop();},8000);
     }catch{setStatus('idle');}
   };
 
@@ -36,6 +40,60 @@ export default function App(){
     else { if(streamRef.current) streamRef.current.getTracks().forEach(t=>t.stop()); setStatus('idle'); }
   };
 
+  // SHAZAM STYLE RESULT
+  if(status==='found' && result){
+    const albumArt = result.spotify?.album?.images?.[0]?.url || result.spotify?.albumArt || result.apple_music?.artwork?.url?.replace('{w}x{h}','600x600') || "https://via.placeholder.com/600?text=Music";
+    const title = result.title || "Unknown";
+    const artist = result.artist || "Unknown Artist";
+    const album = result.album || "";
+    const plays = result.spotify?.popularity ? `${(result.spotify.popularity*10000).toLocaleString()}` : "807,188";
+    return(
+      <div style={{height:'100dvh',width:'100vw',position:'fixed',inset:0,background:'#121212',overflowY:'auto',fontFamily:'system-ui',color:'white'}}>
+        <div style={{height:'58vh',position:'relative',background:'#1a1a1a'}}>
+          <img src={albumArt} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+          <div style={{position:'absolute',inset:0,background:'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0) 40%, rgba(18,18,18,0.8) 75%, #121212 100%)'}}/>
+          <button onClick={()=>setStatus('idle')} style={{position:'absolute',top:14,left:12,background:'rgba(0,0,0,0.4)',border:'none',borderRadius:20,width:36,height:36,color:'white',fontSize:20}}>←</button>
+          <div style={{position:'absolute',top:14,right:14,display:'flex',alignItems:'center',gap:6,background:'rgba(0,0,0,0.4)',padding:'6px 12px',borderRadius:20,fontSize:13,fontWeight:600}}><span>♪</span>LYRICS</div>
+          <div style={{position:'absolute',bottom:16,right:16,width:56,height:56,background:'rgba(255,255,255,0.9)',borderRadius:28,display:'flex',alignItems:'center',justifyContent:'center',color:'#121212',fontSize:24}}>▶</div>
+        </div>
+
+        <div style={{padding:'20px 18px 30px',marginTop:-10}}>
+          <div style={{fontSize:28,fontWeight:800,lineHeight:'32px'}}>{title}</div>
+          <div style={{fontSize:16,color:'#bbb',marginTop:6}}>{artist} {album?`• ${album}`:''}</div>
+          <div style={{display:'flex',gap:10,marginTop:14,alignItems:'center'}}>
+            <div style={{display:'flex',alignItems:'center',gap:6,background:'#2a2a2a',padding:'6px 12px',borderRadius:20,fontSize:13}}><span>⦿</span>{plays}</div>
+            <div style={{display:'flex',alignItems:'center',gap:6,background:'#2a2a2a',padding:'6px 12px',borderRadius:20,fontSize:13}}>♪ Audiomack ↗</div>
+          </div>
+
+          <button onClick={()=>{if(navigator.share) navigator.share({title:title,text:`${title} - ${artist}`});}} style={{width:'100%',background:'#6A4DFF',color:'white',border:'none',padding:16,borderRadius:14,fontSize:16,fontWeight:700,marginTop:20}}>Share song</button>
+
+          <div style={{fontSize:14,fontWeight:800,letterSpacing:1,marginTop:32,marginBottom:14}}>TOP SONGS</div>
+          
+          <div style={{display:'flex',gap:12,padding:'10px 0',borderBottom:'1px solid #222'}}>
+            <img src={albumArt} style={{width:64,height:64,borderRadius:8,objectFit:'cover'}}/>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:700,fontSize:14}}>{title}</div>
+              <div style={{fontSize:12,color:'#999',marginTop:2}}>{artist}</div>
+              <div style={{display:'inline-block',marginTop:6,background:'#2a2a2a',padding:'4px 10px',borderRadius:12,fontSize:11}}>Audiomack</div>
+            </div>
+            <div style={{color:'#555'}}>⋮</div>
+          </div>
+
+          <div style={{display:'flex',gap:12,padding:'10px 0'}}>
+            <div style={{width:64,height:64,borderRadius:8,background:'#333'}}/>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:700,fontSize:14}}>NON MI INNAMORERÓ (Brazi...</div>
+              <div style={{fontSize:12,color:'#999'}}>Pucho, Gordinho Bolado, Mia & Cr...</div>
+            </div>
+          </div>
+
+          <button onClick={()=>setStatus('idle')} style={{width:'100%',background:'#0091EA',color:'white',border:'none',padding:14,borderRadius:12,fontWeight:700,marginTop:30}}>Find Another Song</button>
+        </div>
+      </div>
+    );
+  }
+
+  // MAIN SCREEN - SHARP LOGO PERFECTLY CENTERED
   return(
     <div style={{height:'100dvh',width:'100vw',position:'fixed',inset:0,display:'flex',flexDirection:'column',background:'radial-gradient(ellipse at 50% -10%, #7ED8FF 0%, #2EB6FF 15%, #009CFF 50%, #007AFF 100%)',overflow:'hidden',fontFamily:'system-ui'}}>
       <div style={{height:56,minHeight:56,flexShrink:0,display:'flex',justifyContent:'space-between',alignItems:'center',padding:'0 18px'}}>
@@ -44,9 +102,9 @@ export default function App(){
       </div>
 
       <div style={{flex:1,minHeight:0,display:'flex',alignItems:'center',justifyContent:'center'}}>
-        <div onClick={status==='idle'?start:undefined} style={{width:'min(78vw, 320px)',height:'min(78vw, 320px)',cursor:status==='idle'?'pointer':'default',position:'relative',display:'flex',alignItems:'center',justifyContent:'center'}}>
+        <div onClick={status==='idle'?start:undefined} style={{width:'min(72vw, 300px)',height:'min(72vw, 300px)',cursor:status==='idle'?'pointer':'default',position:'relative',display:'flex',alignItems:'center',justifyContent:'center'}}>
           {status==='listening'&&<><div style={{position:'absolute',inset:-10,borderRadius:'50%',background:'rgba(255,255,255,0.22)',animation:'p 1.4s infinite'}}/><div style={{position:'absolute',inset:-30,borderRadius:'50%',background:'rgba(255,255,255,0.12)',animation:'p 1.4s infinite 0.5s'}}/></>}
-          <img src={LOGO} alt="logo" style={{width:'100%',height:'100%',objectFit:'contain',filter:'drop-shadow(0 0 28px rgba(255,255,255,0.9)) drop-shadow(0 0 60px rgba(255,255,255,0.5))'}}/>
+          <img src="/logo.png" alt="logo" style={{width:'100%',height:'100%',objectFit:'contain',filter:'drop-shadow(0 0 25px rgba(255,255,255,0.9)) drop-shadow(0 0 50px rgba(255,255,255,0.5))',imageRendering:'-webkit-optimize-contrast'}}/>
         </div>
       </div>
 
@@ -55,13 +113,6 @@ export default function App(){
           <button onClick={stop} style={{display:'flex',alignItems:'center',gap:10,background:'rgba(255,255,255,0.18)',border:'1.5px solid white',borderRadius:40,padding:'11px 30px',color:'white',fontSize:16,fontWeight:600,backdropFilter:'blur(10px)',cursor:'pointer'}}>
             <div style={{width:16,height:16,background:'white',borderRadius:2}}/>Stop
           </button>
-        )}
-        {status==='found'&&result&&(
-          <div style={{background:'white',borderRadius:16,padding:'12px 16px',width:'min(86vw,340px)',textAlign:'center'}}>
-            <div style={{fontWeight:800,fontSize:13}}>{result.title}</div>
-            <div style={{fontSize:11,color:'#666'}}>{result.artist}</div>
-            <button onClick={()=>setStatus('idle')} style={{marginTop:8,width:'100%',background:'#0091EA',color:'white',border:'none',padding:9,borderRadius:10,fontWeight:700}}>Find Again</button>
-          </div>
         )}
       </div>
 
@@ -73,4 +124,4 @@ export default function App(){
       <style>{`@keyframes p{0%{transform:scale(0.9);opacity:1}100%{transform:scale(1.5);opacity:0}}`}</style>
     </div>
   );
-                     }
+}
