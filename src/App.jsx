@@ -5,119 +5,128 @@ export default function App() {
   const canvasRef = useRef(null);
   const analyserRef = useRef(null);
   const streamRef = useRef(null);
-  const audioContextRef = useRef(null);
-
+  const audioRef = useRef(null);
   const [listening, setListening] = useState(false);
 
-  const SIZE = 420;
-  const CENTER = SIZE / 2;
-  const COUNT = 220;
-
-  // Draw the glowing waveform animation
+  // Lightweight flowing waveform animation
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
-
     const ctx = canvas.getContext("2d");
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
-    canvas.width = SIZE * dpr;
-    canvas.height = SIZE * dpr;
+    const W = 600;
+    const H = 300;
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    const smooth = new Array(COUNT).fill(0);
-    const audioData = new Uint8Array(1024);
+    let frame;
+    let volume = 0;
+    const samples = 120;
+    const audioSamples = new Uint8Array(1024);
 
-    let animationFrame;
+    function drawWave(time, amplitude, phase, opacity, color1, color2) {
+      const middle = H / 2;
 
-    function draw() {
-      ctx.clearRect(0, 0, SIZE, SIZE);
+      const gradient = ctx.createLinearGradient(0, 0, 0, H);
+      gradient.addColorStop(0, color1);
+      gradient.addColorStop(1, color2);
+
+      ctx.beginPath();
+      ctx.moveTo(0, middle);
+
+      for (let i = 0; i <= samples; i++) {
+        const x = (i / samples) * W;
+        const progress = i / samples;
+
+        const wave =
+          Math.sin(progress * Math.PI * 4 + time * 1.8 + phase) *
+          0.65 +
+          Math.sin(progress * Math.PI * 2.2 - time * 1.2 + phase) *
+          0.35;
+
+        const envelope =
+          0.25 + Math.pow(Math.sin(progress * Math.PI), 0.8) * 0.75;
+
+        const y =
+          middle +
+          wave * amplitude * envelope;
+
+        ctx.lineTo(x, y);
+      }
+
+      ctx.lineTo(W, middle);
+      ctx.lineTo(0, middle);
+      ctx.closePath();
+
+      ctx.globalAlpha = opacity;
+      ctx.fillStyle = gradient;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    function animate() {
+      const time = performance.now() / 1000;
+
+      ctx.clearRect(0, 0, W, H);
 
       const analyser = analyserRef.current;
 
+      let targetVolume = 0;
+
       if (analyser) {
-        analyser.getByteFrequencyData(audioData);
-      }
+        analyser.getByteTimeDomainData(audioSamples);
 
-      const time = performance.now() / 1000;
+        let sum = 0;
 
-      // Circular waveform bars
-      for (let i = 0; i < COUNT; i++) {
-        const angle = (i / COUNT) * Math.PI * 2;
-
-        // Four large moving wave peaks
-        const wave =
-          Math.pow((1 + Math.sin(angle * 4 - time * 2)) / 2, 2);
-
-        let sound = 0;
-
-        if (analyser) {
-          const index = Math.min(
-            audioData.length - 1,
-            Math.floor(2 + (i / COUNT) * 250)
-          );
-
-          sound = audioData[index] / 255;
+        for (let i = 0; i < audioSamples.length; i++) {
+          const value = (audioSamples[i] - 128) / 128;
+          sum += value * value;
         }
 
-        smooth[i] += (sound - smooth[i]) * 0.25;
-
-        const idleLength = 9 + wave * 32;
-
-        const barLength = analyser
-          ? idleLength + smooth[i] * 55
-          : idleLength;
-
-        const innerRadius = 145;
-        const outerRadius = innerRadius + barLength;
-
-        const x1 = CENTER + Math.cos(angle) * innerRadius;
-        const y1 = CENTER + Math.sin(angle) * innerRadius;
-
-        const x2 = CENTER + Math.cos(angle) * outerRadius;
-        const y2 = CENTER + Math.sin(angle) * outerRadius;
-
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-
-        ctx.strokeStyle = "rgba(255,255,255,0.98)";
-        ctx.lineWidth = 3.2;
-        ctx.lineCap = "round";
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = "rgba(255,255,255,0.95)";
-        ctx.stroke();
+        targetVolume = Math.sqrt(sum / audioSamples.length);
       }
 
-      ctx.shadowBlur = 0;
+      volume += (targetVolume - volume) * 0.18;
 
-      // Glowing circular rings
-      [118, 140].forEach((radius) => {
-        ctx.beginPath();
-        ctx.arc(CENTER, CENTER, radius, 0, Math.PI * 2);
-        ctx.strokeStyle = "rgba(255,255,255,0.75)";
-        ctx.lineWidth = 1.8;
-        ctx.shadowBlur = 9;
-        ctx.shadowColor = "white";
-        ctx.stroke();
-      });
+      const amplitude = 65 + volume * 400;
 
-      ctx.shadowBlur = 0;
+      // Dark translucent moving wave behind
+      drawWave(
+        time,
+        amplitude * 0.75,
+        1.5,
+        0.38,
+        "#ff7777",
+        "#a90025"
+      );
 
-      animationFrame = requestAnimationFrame(draw);
+      // Main glowing red wave
+      drawWave(
+        time,
+        amplitude,
+        0,
+        0.96,
+        "#ff1645",
+        "#e00027"
+      );
+
+      frame = requestAnimationFrame(animate);
     }
 
-    draw();
+    animate();
 
-    return () => cancelAnimationFrame(animationFrame);
+    return () => cancelAnimationFrame(frame);
   }, []);
 
-  async function startMicrophone() {
-    try {
-      if (!navigator.mediaDevices?.getUserMedia) {
-        throw new Error("Microphone access is unavailable.");
-      }
+  async function toggleMicrophone() {
+    if (listening) {
+      stopMicrophone();
+      return;
+    }
 
+    try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: true
       });
@@ -127,23 +136,23 @@ export default function App() {
       const AudioContextClass =
         window.AudioContext || window.webkitAudioContext;
 
-      const audioContext = new AudioContextClass();
-      audioContextRef.current = audioContext;
+      const audio = new AudioContextClass();
+      audioRef.current = audio;
 
-      await audioContext.resume();
+      await audio.resume();
 
-      const source = audioContext.createMediaStreamSource(stream);
-      const analyser = audioContext.createAnalyser();
+      const source = audio.createMediaStreamSource(stream);
+      const analyser = audio.createAnalyser();
 
       analyser.fftSize = 2048;
-      analyser.smoothingTimeConstant = 0.7;
+      analyser.smoothingTimeConstant = 0.8;
 
       source.connect(analyser);
       analyserRef.current = analyser;
 
       setListening(true);
     } catch (error) {
-      console.error("FINDORA microphone error:", error);
+      console.error(error);
       alert("Microphone error: " + error.message);
       stopMicrophone();
     }
@@ -155,21 +164,13 @@ export default function App() {
       streamRef.current = null;
     }
 
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-      audioContextRef.current = null;
+    if (audioRef.current) {
+      audioRef.current.close();
+      audioRef.current = null;
     }
 
     analyserRef.current = null;
     setListening(false);
-  }
-
-  function toggleMicrophone() {
-    if (listening) {
-      stopMicrophone();
-    } else {
-      startMicrophone();
-    }
   }
 
   useEffect(() => {
@@ -178,40 +179,43 @@ export default function App() {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
 
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
+      if (audioRef.current) {
+        audioRef.current.close();
       }
     };
   }, []);
 
   return (
     <main style={styles.page}>
-
       <header style={styles.header}>
         <div style={styles.search}>⌕ Search</div>
         <div style={styles.menu}>☰</div>
       </header>
 
-      <section style={styles.center}>
+      <section
+        style={styles.animationArea}
+        onClick={toggleMicrophone}
+        role="button"
+        tabIndex={0}
+        aria-label="Tap to start or stop listening"
+        onKeyDown={event => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            toggleMicrophone();
+          }
+        }}
+      >
+        <canvas
+          ref={canvasRef}
+          style={styles.canvas}
+        />
 
-        <button
-          type="button"
-          onClick={toggleMicrophone}
-          style={styles.waveButton}
-          aria-label={listening ? "Stop listening" : "Start listening"}
-        >
-          <canvas
-            ref={canvasRef}
-            style={styles.canvas}
-          />
-
-          <img
-            src="/findora-logo.jpg"
-            alt="FINDORA"
-            style={styles.logo}
-          />
-        </button>
-
+        <img
+          src="/findora-logo.png"
+          alt="FINDORA logo"
+          style={styles.logo}
+          draggable="false"
+        />
       </section>
 
       <footer style={styles.dots}>
@@ -219,7 +223,6 @@ export default function App() {
         <span style={styles.dot}></span>
         <span style={styles.dot}></span>
       </footer>
-
     </main>
   );
 }
@@ -256,20 +259,13 @@ const styles = {
     color: "white"
   },
 
-  center: {
+  animationArea: {
     flex: 1,
+    width: "100%",
     display: "flex",
     justifyContent: "center",
-    alignItems: "center"
-  },
-
-  waveButton: {
-    width: "min(94vw, 420px)",
-    aspectRatio: "1 / 1",
+    alignItems: "center",
     position: "relative",
-    border: "none",
-    padding: 0,
-    background: "transparent",
     cursor: "pointer",
     touchAction: "manipulation",
     WebkitTapHighlightColor: "transparent"
@@ -277,20 +273,22 @@ const styles = {
 
   canvas: {
     width: "100%",
-    height: "100%",
+    maxWidth: "600px",
+    height: "auto",
+    aspectRatio: "2 / 1",
     display: "block",
     pointerEvents: "none"
   },
 
   logo: {
     position: "absolute",
-    width: "31%",
-    height: "31%",
+    width: "23%",
+    maxWidth: "125px",
+    height: "auto",
+    objectFit: "contain",
     left: "50%",
     top: "50%",
     transform: "translate(-50%, -50%)",
-    objectFit: "contain",
-    mixBlendMode: "screen",
     pointerEvents: "none"
   },
 
@@ -315,6 +313,6 @@ const styles = {
     height: "13px",
     borderRadius: "50%",
     background: "white",
-    boxShadow: "0 0 15px white"
+    boxShadow: "0 0 12px white"
   }
 };
