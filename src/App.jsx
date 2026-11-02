@@ -1,115 +1,193 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>White Audio Visualizer - Like Image</title>
-<style>
-* { margin:0; padding:0; box-sizing:border-box; }
-body { background:#000; height:100vh; display:flex; justify-content:center; align-items:center; overflow:hidden; }
-canvas { width:min(90vw,600px); height:min(90vw,600px); }
-</style>
-</head>
-<body>
-<canvas id="visualizer"></canvas>
-<script>
-const canvas = document.getElementById("visualizer");
-const ctx = canvas.getContext("2d");
-let audioContext, analyser, dataArray, active=false;
+import React, { useRef, useState, useEffect } from "react";
 
-function resize(){
-  const size=Math.min(window.innerWidth*0.9,600);
-  const dpr=window.devicePixelRatio||1;
-  canvas.width=size*dpr; canvas.height=size*dpr;
-  ctx.setTransform(dpr,0,0,dpr,0,0);
-}
-resize();
-window.addEventListener("resize",resize);
+export default function FindoraRecorder() {
+  const canvasRef = useRef(null);
+  const analyserRef = useRef(null);
+  const streamRef = useRef(null);
+  const recorderRef = useRef(null);
+  const chunksRef = useRef([]);
+  const animRef = useRef(null);
+  const [recording, setRecording] = useState(false);
 
-const WHITE="#FFFFFF";
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    const size = 320;
+    const dpr = window.devicePixelRatio || 1;
 
-function draw(){
-  const size=canvas.width/(window.devicePixelRatio||1);
-  const center=size/2;
-  const radius=size*0.28;
-  ctx.clearRect(0,0,size,size);
+    canvas.width = size * dpr;
+    canvas.height = size * dpr;
+    canvas.style.width = `${size}px`;
+    canvas.style.height = `${size}px`;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-  if(active && analyser) analyser.getByteFrequencyData(dataArray);
+    const center = size / 2;
 
-  // Outer dotted ring - like image (small dots)
-  for(let i=0;i<200;i++){
-    const angle=(i/200)*Math.PI*2;
-    const x=center+Math.cos(angle)*radius;
-    const y=center+Math.sin(angle)*radius;
-    ctx.beginPath();
-    ctx.arc(x,y,1.2,0,Math.PI*2);
-    ctx.fillStyle=WHITE;
-    ctx.globalAlpha=0.9;
-    ctx.fill();
-  }
+    function animate() {
+      ctx.clearRect(0, 0, size, size);
 
-  // Inner dotted ring - tighter
-  for(let i=0;i<160;i++){
-    const angle=(i/160)*Math.PI*2;
-    const x=center+Math.cos(angle)*(radius-18);
-    const y=center+Math.sin(angle)*(radius-18);
-    ctx.beginPath();
-    ctx.arc(x,y,1,0,Math.PI*2);
-    ctx.fillStyle=WHITE;
-    ctx.globalAlpha=0.7;
-    ctx.fill();
-  }
-  ctx.globalAlpha=1;
+      const radius = 105;
+      const data = new Uint8Array(128);
+      if (analyserRef.current) {
+        analyserRef.current.getByteFrequencyData(data);
+      }
 
-  // Radial bars - sparse like image, only show when loud
-  const bars=180;
-  for(let i=0;i<bars;i++){
-    const angle=(i/bars)*Math.PI*2;
-    let freq=0;
-    if(active && dataArray){
-      const idx=Math.floor(i/bars*dataArray.length);
-      freq=dataArray[idx]/255;
-    }else{
-      // idle small animation like image
-      freq=Math.random()*0.15;
-      if(i%25!==0 && i%33!==0) freq*=0.1; // make sparse like screenshot
+      // Outer white dotted ring
+      for (let i = 0; i < 180; i++) {
+        const angle = (i / 180) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.arc(
+          center + Math.cos(angle) * radius,
+          center + Math.sin(angle) * radius,
+          1.7,
+          0,
+          Math.PI * 2
+        );
+        ctx.fillStyle = "#FFFFFF";
+        ctx.shadowBlur = 7;
+        ctx.shadowColor = "#FFFFFF";
+        ctx.fill();
+      }
+
+      // Inner white dotted ring
+      for (let i = 0; i < 150; i++) {
+        const angle = (i / 150) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.arc(
+          center + Math.cos(angle) * 91,
+          center + Math.sin(angle) * 91,
+          1,
+          0,
+          Math.PI * 2
+        );
+        ctx.fillStyle = "#FFFFFF";
+        ctx.shadowBlur = 0;
+        ctx.fill();
+      }
+
+      // Moving white audio bars
+      for (let i = 0; i < 180; i++) {
+        const angle = (i / 180) * Math.PI * 2;
+        const frequency = analyserRef.current
+          ? data[Math.floor((i / 180) * 128)] / 255
+          : 0.15 + Math.sin(Date.now() / 250 + i * 0.3) * 0.1;
+
+        const length = 5 + frequency * 48;
+
+        ctx.beginPath();
+        ctx.moveTo(
+          center + Math.cos(angle) * 112,
+          center + Math.sin(angle) * 112
+        );
+        ctx.lineTo(
+          center + Math.cos(angle) * (112 + length),
+          center + Math.sin(angle) * (112 + length)
+        );
+        ctx.strokeStyle = "#FFFFFF";
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = "round";
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = "#FFFFFF";
+        ctx.stroke();
+      }
+
+      ctx.shadowBlur = 0;
+      animRef.current = requestAnimationFrame(animate);
     }
 
-    if(freq < 0.08) continue; // hide quiet bars = sparse look
+    animate();
+    return () => cancelAnimationFrame(animRef.current);
+  }, []);
 
-    const barLength=freq*90;
-    const gap=6;
-    const x1=center+Math.cos(angle)*(radius+gap);
-    const y1=center+Math.sin(angle)*(radius+gap);
-    const x2=center+Math.cos(angle)*(radius+gap+barLength);
-    const y2=center+Math.sin(angle)*(radius+gap+barLength);
+  async function startRecording() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
 
-    ctx.beginPath();
-    ctx.moveTo(x1,y1);
-    ctx.lineTo(x2,y2);
-    ctx.strokeStyle=WHITE;
-    ctx.lineWidth=2.8;
-    ctx.lineCap="round";
-    ctx.stroke();
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      await audioContext.resume();
+
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256;
+      audioContext.createMediaStreamSource(stream).connect(analyser);
+      analyserRef.current = analyser;
+
+      const recorder = new MediaRecorder(stream);
+      recorderRef.current = recorder;
+      chunksRef.current = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size) chunksRef.current.push(e.data);
+      };
+
+      recorder.start();
+      setRecording(true);
+    } catch (error) {
+      alert("Please allow microphone access.");
+    }
   }
 
-  requestAnimationFrame(draw);
-}
-draw();
+  function stopRecording() {
+    if (recorderRef.current?.state === "recording") {
+      recorderRef.current.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: recorderRef.current.mimeType });
+        const url = URL.createObjectURL(blob);
+        console.log("Recording:", url);
+        // you can upload url here
+      };
+      recorderRef.current.stop();
+    }
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    analyserRef.current = null;
+    setRecording(false);
+  }
 
-async function start(){
-  try{
-    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
-    audioContext=new(window.AudioContext||window.webkitAudioContext)();
-    analyser=audioContext.createAnalyser();
-    analyser.fftSize=512;
-    const source=audioContext.createMediaStreamSource(stream);
-    source.connect(analyser);
-    dataArray=new Uint8Array(analyser.frequencyBinCount);
-    active=true;
-  }catch(e){ alert("Allow mic"); }
-}
-document.body.addEventListener("click", start, {once:true});
-</script>
-</body>
-</html>
+  return (
+    <>
+      <div className="findora-recorder">
+        <canvas ref={canvasRef} />
+        <button
+          onClick={recording ? stopRecording : startRecording}
+          className="record-control"
+        >
+          {recording ? "Stop recording" : "Start recording"}
+        </button>
+      </div>
+
+      <style>{`
+        .findora-recorder {
+          width: 100%;
+          min-height: 400px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          background: #000;
+          overflow: hidden;
+          border-radius: 24px;
+        }
+        .findora-recorder canvas {
+          width: min(90vw, 320px);
+          height: auto;
+          aspect-ratio: 1;
+        }
+        .record-control {
+          margin-top: 24px;
+          padding: 13px 30px;
+          border: none;
+          border-radius: 30px;
+          background: white;
+          color: #008cff;
+          font-weight: 600;
+          font-size: 16px;
+          cursor: pointer;
+          transition: transform 0.15s;
+        }
+        .record-control:active {
+          transform: scale(0.95);
+        }
+      `}</style>
+    </>
+  );
+  }
