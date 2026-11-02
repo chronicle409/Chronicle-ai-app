@@ -1,120 +1,107 @@
 
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>FINDORA</title>
 
 <style>
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+*{box-sizing:border-box;margin:0;padding:0}
+
+body{
+  background:#087ff5;
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  font-family:Arial,sans-serif;
+  overflow:hidden;
 }
 
-html, body {
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  font-family: Arial, sans-serif;
-  background: #087ff5;
+header{
+  height:65px;
+  padding:0 22px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  color:white;
 }
 
-body {
-  min-height: 100vh;
-  min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
+.search{font-size:23px;font-weight:bold}
+.menu{font-size:30px}
+
+.findora-wave-wrap{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
 }
 
-header {
-  height: 65px;
-  flex-shrink: 0;
-  padding: 0 22px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  color: white;
-  position: relative;
-  z-index: 2;
+#findoraListen{
+  width:min(85vw,350px);
+  aspect-ratio:1;
+  border:0;
+  background:transparent;
+  touch-action:manipulation;
+  cursor:pointer;
 }
 
-.search {
-  font-size: 25px;
-  font-weight: bold;
+#findoraCanvas{
+  width:100%;
+  height:100%;
+  display:block;
+  pointer-events:none;
 }
 
-.menu {
-  font-size: 34px;
+#findoraStatus{
+  color:white;
+  font-size:15px;
+  margin:10px 0 18px;
+  font-weight:bold;
+  text-align:center;
 }
 
-.findora-wave-wrap {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  position: relative;
-  z-index: 10;
-  pointer-events: auto;
+/* NEW MICROPHONE BUTTON */
+
+#micButton{
+  width:76px;
+  height:76px;
+  border-radius:50%;
+  border:3px solid white;
+  background:#0865d9;
+  color:white;
+  font-size:30px;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  cursor:pointer;
+  touch-action:manipulation;
+  box-shadow:0 0 20px rgba(255,255,255,.35);
+  -webkit-tap-highlight-color:transparent;
 }
 
-#findoraListen {
-  display: block;
-  width: min(88vw, 390px);
-  aspect-ratio: 1;
-  padding: 0;
-  border: none;
-  outline: none;
-  background: transparent;
-  cursor: pointer;
-  position: relative;
-  z-index: 20;
-  pointer-events: auto;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
+#micButton.active{
+  background:#ffffff;
+  color:#087ff5;
+  box-shadow:0 0 25px white;
 }
 
-#findoraCanvas {
-  width: 100%;
-  height: 100%;
-  display: block;
-  pointer-events: none;
+.dots{
+  height:45px;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:12px;
 }
 
-#findoraStatus {
-  margin-top: 12px;
-  color: white;
-  font-size: 15px;
-  font-weight: bold;
-  text-align: center;
-  min-height: 20px;
-  pointer-events: none;
+.dots span{
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:rgba(255,255,255,.4);
 }
 
-.dots {
-  height: 48px;
-  flex-shrink: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 12px;
-  position: relative;
-  z-index: 2;
-}
-
-.dots span {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: rgba(255,255,255,.4);
-}
-
-.dots span.on {
-  background: white;
-  box-shadow: 0 0 12px white;
-}
+.dots span.on{background:white}
 </style>
 </head>
 
@@ -127,16 +114,15 @@ header {
 
 <div class="findora-wave-wrap">
 
-  <button id="findoraListen" type="button"
-    aria-label="Start listening">
-
+  <button id="findoraListen" type="button">
     <canvas id="findoraCanvas"></canvas>
-
   </button>
 
-  <div id="findoraStatus">
-    Tap the circle to listen
-  </div>
+  <div id="findoraStatus">Ready to listen</div>
+
+  <button id="micButton" type="button" aria-label="Start microphone">
+    🎤
+  </button>
 
 </div>
 
@@ -147,247 +133,181 @@ header {
 </div>
 
 <script>
-(() => {
+const canvas=document.getElementById("findoraCanvas");
+const ctx=canvas.getContext("2d");
+const status=document.getElementById("findoraStatus");
+const micButton=document.getElementById("micButton");
 
-const button = document.getElementById("findoraListen");
-const canvas = document.getElementById("findoraCanvas");
-const status = document.getElementById("findoraStatus");
-const ctx = canvas.getContext("2d");
+const SIZE=390;
+const CENTER=195;
+const COUNT=180;
 
-const SIZE = 390;
-const CENTER = SIZE / 2;
-const COUNT = 180;
+let listening=false;
+let stream=null;
+let audioContext=null;
+let analyser=null;
+let audioData=null;
 
-let listening = false;
-let stream = null;
-let audioContext = null;
-let analyser = null;
-let audioData = null;
+let smooth=new Array(COUNT).fill(0);
 
-let smooth = new Array(COUNT).fill(0);
+const dpr=Math.min(devicePixelRatio||1,2);
+canvas.width=SIZE*dpr;
+canvas.height=SIZE*dpr;
+ctx.setTransform(dpr,0,0,dpr,0,0);
 
-const dpr = Math.min(window.devicePixelRatio || 1, 2);
+async function startListening(){
 
-canvas.width = SIZE * dpr;
-canvas.height = SIZE * dpr;
+  try{
 
-ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    status.textContent="Requesting microphone...";
 
-// START MICROPHONE
-
-async function startListening() {
-
-  try {
-
-    status.textContent = "Opening microphone...";
-
-    if (!window.isSecureContext ||
-        !navigator.mediaDevices ||
-        !navigator.mediaDevices.getUserMedia) {
-
-      throw new Error(
-        "Open FINDORA using HTTPS in Chrome."
-      );
+    if(!navigator.mediaDevices?.getUserMedia){
+      throw new Error("Use an HTTPS page in Chrome.");
     }
 
-    stream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true
-      }
+    stream=await navigator.mediaDevices.getUserMedia({
+      audio:true
     });
 
-    audioContext = new (
-      window.AudioContext ||
-      window.webkitAudioContext
-    )();
+    audioContext=new(window.AudioContext||
+      window.webkitAudioContext)();
 
     await audioContext.resume();
 
-    const source =
+    const source=
       audioContext.createMediaStreamSource(stream);
 
-    analyser = audioContext.createAnalyser();
-
-    analyser.fftSize = 2048;
-    analyser.smoothingTimeConstant = 0.75;
+    analyser=audioContext.createAnalyser();
+    analyser.fftSize=2048;
+    analyser.smoothingTimeConstant=0.75;
 
     source.connect(analyser);
 
-    audioData = new Uint8Array(
-      analyser.frequencyBinCount
-    );
+    audioData=new Uint8Array(analyser.frequencyBinCount);
 
-    listening = true;
+    listening=true;
 
-    status.textContent = "Listening... Speak now 🎤";
+    status.textContent="Listening... Speak now!";
+    micButton.textContent="⏹";
+    micButton.classList.add("active");
 
-    button.setAttribute(
-      "aria-label",
-      "Stop listening"
-    );
-
-  } catch (error) {
+  }catch(error){
 
     console.error(error);
-
-    stopMicrophone();
-
-    status.textContent =
-      "Microphone error: " + error.message;
+    status.textContent="Microphone error: "+error.message;
+    stopListening();
 
   }
-
 }
 
-// STOP MICROPHONE
+function stopListening(){
 
-function stopMicrophone() {
+  listening=false;
 
-  listening = false;
-
-  if (stream) {
-    stream.getTracks().forEach(track => track.stop());
-    stream = null;
+  if(stream){
+    stream.getTracks().forEach(track=>track.stop());
+    stream=null;
   }
 
-  if (audioContext) {
+  if(audioContext){
     audioContext.close();
-    audioContext = null;
+    audioContext=null;
   }
 
-  analyser = null;
-  audioData = null;
-
+  analyser=null;
+  audioData=null;
   smooth.fill(0);
 
-  status.textContent = "Tap the circle to listen";
-
-  button.setAttribute(
-    "aria-label",
-    "Start listening"
-  );
-
+  status.textContent="Ready to listen";
+  micButton.textContent="🎤";
+  micButton.classList.remove("active");
 }
 
-// BUTTON TAP
-
-button.addEventListener("click", async function(event) {
-
-  event.preventDefault();
-
-  if (listening) {
-
-    stopMicrophone();
-
-  } else {
-
-    await startListening();
-
+micButton.addEventListener("click",()=>{
+  if(listening){
+    stopListening();
+  }else{
+    startListening();
   }
-
 });
 
-// RAINBOW SOUND WAVE ANIMATION
+// Waveform is also tappable
+document.getElementById("findoraListen")
+.addEventListener("click",()=>{
+  if(listening){
+    stopListening();
+  }else{
+    startListening();
+  }
+});
 
-function draw() {
+function draw(){
 
   requestAnimationFrame(draw);
+  ctx.clearRect(0,0,SIZE,SIZE);
 
-  ctx.clearRect(0, 0, SIZE, SIZE);
-
-  if (listening && analyser && audioData) {
+  if(listening && analyser){
     analyser.getByteFrequencyData(audioData);
   }
 
-  const time = performance.now() * 0.001;
+  const time=performance.now()*0.001;
 
-  for (let i = 0; i < COUNT; i++) {
+  for(let i=0;i<COUNT;i++){
 
-    const angle = i / COUNT * Math.PI * 2;
+    const angle=i/COUNT*Math.PI*2;
+    let sound=0;
 
-    let sound = 0;
-
-    if (listening && audioData) {
-
-      const index = Math.floor(
-        2 + i / COUNT * 150
-      );
-
-      sound = audioData[index] / 255;
-
+    if(listening && audioData){
+      const index=Math.floor(2+i/COUNT*150);
+      sound=audioData[index]/255;
     }
 
-    smooth[i] += (sound - smooth[i]) * 0.3;
+    smooth[i]+=(sound-smooth[i])*0.3;
 
-    const movement = listening
-      ? smooth[i] * 65
-      : Math.sin(time * 1.5 + i * 0.1) * 2;
+    const length=listening
+      ?5+smooth[i]*65
+      :5+Math.sin(time*1.5+i*.1)*2;
 
-    const inner = 135;
-    const outer = inner + 5 + Math.max(0, movement);
+    const inner=135;
+    const outer=inner+length;
 
-    const x1 = CENTER + Math.cos(angle) * inner;
-    const y1 = CENTER + Math.sin(angle) * inner;
+    const x1=CENTER+Math.cos(angle)*inner;
+    const y1=CENTER+Math.sin(angle)*inner;
+    const x2=CENTER+Math.cos(angle)*outer;
+    const y2=CENTER+Math.sin(angle)*outer;
 
-    const x2 = CENTER + Math.cos(angle) * outer;
-    const y2 = CENTER + Math.sin(angle) * outer;
-
-    const hue =
-      (i * 360 / COUNT + time * 40) % 360;
+    const hue=(i*360/COUNT+time*40)%360;
 
     ctx.beginPath();
+    ctx.moveTo(x1,y1);
+    ctx.lineTo(x2,y2);
 
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
+    ctx.strokeStyle=listening
+      ?`hsl(${hue},100%,72%)`
+      :"white";
 
-    ctx.strokeStyle = listening
-      ? `hsl(${hue},100%,72%)`
-      : "#ffffff";
-
-    ctx.lineWidth = 3;
-    ctx.lineCap = "round";
-
-    ctx.shadowBlur = listening ? 14 : 5;
-    ctx.shadowColor = `hsl(${hue},100%,70%)`;
-
+    ctx.lineWidth=3;
+    ctx.lineCap="round";
+    ctx.shadowBlur=listening?13:5;
+    ctx.shadowColor=`hsl(${hue},100%,70%)`;
     ctx.stroke();
-
   }
 
-  // INNER DOTTED CIRCLES
+  ctx.shadowBlur=0;
 
-  ctx.shadowBlur = 0;
-
-  [103, 124].forEach(radius => {
-
+  [103,124].forEach(radius=>{
     ctx.beginPath();
-
-    ctx.arc(
-      CENTER,
-      CENTER,
-      radius,
-      0,
-      Math.PI * 2
-    );
-
-    ctx.setLineDash([1, 5]);
-
-    ctx.strokeStyle = "rgba(255,255,255,0.9)";
-    ctx.lineWidth = 2.5;
-
+    ctx.arc(CENTER,CENTER,radius,0,Math.PI*2);
+    ctx.setLineDash([1,5]);
+    ctx.strokeStyle="rgba(255,255,255,.9)";
+    ctx.lineWidth=2.5;
     ctx.stroke();
-
   });
 
   ctx.setLineDash([]);
-
 }
 
 draw();
-
-})();
 </script>
 
 </body>
