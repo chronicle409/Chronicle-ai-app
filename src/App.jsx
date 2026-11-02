@@ -3,69 +3,113 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Camera Click</title>
+<title>White Audio Visualizer - Like Image</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
-body { height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center; background:#fff; gap:20px; }
-.camera { width:300px; height:270px; overflow:visible; cursor:pointer; }
-.camera-body { fill:none; stroke:#2f88ff; stroke-width:20; stroke-linecap:round; stroke-linejoin:round; }
-.lens { fill:none; stroke:#2f88ff; stroke-width:20; }
-.flash-btn { fill:none; stroke:#2f88ff; stroke-width:18; stroke-linecap:round; }
-.flash { fill:#2f88ff; opacity:0; transform-origin: 249px 89px; }
-.flash.show { animation: shutter 0.6s ease-out forwards; }
-@keyframes shutter {
-  0% { opacity:0; transform:scale(0.1); }
-  40% { opacity:0.3; transform:scale(0.8); }
-  100% { opacity:0; transform:scale(1.8); }
-}
-.camera-dot { cursor:pointer; }
-.camera-dot.anim { animation: shutterClick 0.6s ease-in-out; }
-@keyframes shutterClick {
-  0% { transform: scale(1); }
-  30% { transform: scale(0.88); }
-  60% { transform: scale(1.08); }
-  100% { transform: scale(1); }
-}
-#display {
-  width:300px; height:100px; border-radius:16px; background:#e8f0ff;
-  border:2px solid #2f88ff; display:none; align-items:center;
-  justify-content:center; color:#2f88ff; font-family:Arial; font-weight:700;
-}
-#display.show { display:flex; }
+body { background:#000; height:100vh; display:flex; justify-content:center; align-items:center; overflow:hidden; }
+canvas { width:min(90vw,600px); height:min(90vw,600px); }
 </style>
 </head>
 <body>
-
-<svg class="camera" id="cam" viewBox="0 0 300 270" xmlns="http://www.w3.org/2000/svg">
-  <path class="flash-btn" d="M35 12 H72" />
-  <path class="camera-body" d="M48 50 H97 L108 19 Q112 8 125 8 H180 Q193 8 197 20 L208 50 H253 Q280 50 280 78 V222 Q280 250 253 250 H48 Q20 250 20 222 V78 Q20 50 48 50 Z" />
-  <circle class="lens" cx="150" cy="145" r="64" />
-  <circle class="flash" id="flashCircle" cx="249" cy="89" r="85" />
-  <circle class="camera-dot" id="dot" cx="249" cy="89" r="14" fill="#2f88ff" />
-</svg>
-
-<div id="display">📸 Displayed After Click!</div>
-
+<canvas id="visualizer"></canvas>
 <script>
-const cam = document.getElementById('cam');
-const dot = document.getElementById('dot');
-const flash = document.getElementById('flashCircle');
-const display = document.getElementById('display');
+const canvas = document.getElementById("visualizer");
+const ctx = canvas.getContext("2d");
+let audioContext, analyser, dataArray, active=false;
 
-cam.addEventListener('click', () => {
-  dot.classList.remove('anim');
-  flash.classList.remove('show');
-  void dot.offsetWidth;
-  dot.classList.add('anim');
-  flash.classList.add('show');
-  display.classList.add('show');
-  
-  setTimeout(() => {
-    dot.classList.remove('anim');
-    flash.classList.remove('show');
-  }, 600);
-});
+function resize(){
+  const size=Math.min(window.innerWidth*0.9,600);
+  const dpr=window.devicePixelRatio||1;
+  canvas.width=size*dpr; canvas.height=size*dpr;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+resize();
+window.addEventListener("resize",resize);
+
+const WHITE="#FFFFFF";
+
+function draw(){
+  const size=canvas.width/(window.devicePixelRatio||1);
+  const center=size/2;
+  const radius=size*0.28;
+  ctx.clearRect(0,0,size,size);
+
+  if(active && analyser) analyser.getByteFrequencyData(dataArray);
+
+  // Outer dotted ring - like image (small dots)
+  for(let i=0;i<200;i++){
+    const angle=(i/200)*Math.PI*2;
+    const x=center+Math.cos(angle)*radius;
+    const y=center+Math.sin(angle)*radius;
+    ctx.beginPath();
+    ctx.arc(x,y,1.2,0,Math.PI*2);
+    ctx.fillStyle=WHITE;
+    ctx.globalAlpha=0.9;
+    ctx.fill();
+  }
+
+  // Inner dotted ring - tighter
+  for(let i=0;i<160;i++){
+    const angle=(i/160)*Math.PI*2;
+    const x=center+Math.cos(angle)*(radius-18);
+    const y=center+Math.sin(angle)*(radius-18);
+    ctx.beginPath();
+    ctx.arc(x,y,1,0,Math.PI*2);
+    ctx.fillStyle=WHITE;
+    ctx.globalAlpha=0.7;
+    ctx.fill();
+  }
+  ctx.globalAlpha=1;
+
+  // Radial bars - sparse like image, only show when loud
+  const bars=180;
+  for(let i=0;i<bars;i++){
+    const angle=(i/bars)*Math.PI*2;
+    let freq=0;
+    if(active && dataArray){
+      const idx=Math.floor(i/bars*dataArray.length);
+      freq=dataArray[idx]/255;
+    }else{
+      // idle small animation like image
+      freq=Math.random()*0.15;
+      if(i%25!==0 && i%33!==0) freq*=0.1; // make sparse like screenshot
+    }
+
+    if(freq < 0.08) continue; // hide quiet bars = sparse look
+
+    const barLength=freq*90;
+    const gap=6;
+    const x1=center+Math.cos(angle)*(radius+gap);
+    const y1=center+Math.sin(angle)*(radius+gap);
+    const x2=center+Math.cos(angle)*(radius+gap+barLength);
+    const y2=center+Math.sin(angle)*(radius+gap+barLength);
+
+    ctx.beginPath();
+    ctx.moveTo(x1,y1);
+    ctx.lineTo(x2,y2);
+    ctx.strokeStyle=WHITE;
+    ctx.lineWidth=2.8;
+    ctx.lineCap="round";
+    ctx.stroke();
+  }
+
+  requestAnimationFrame(draw);
+}
+draw();
+
+async function start(){
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    audioContext=new(window.AudioContext||window.webkitAudioContext)();
+    analyser=audioContext.createAnalyser();
+    analyser.fftSize=512;
+    const source=audioContext.createMediaStreamSource(stream);
+    source.connect(analyser);
+    dataArray=new Uint8Array(analyser.frequencyBinCount);
+    active=true;
+  }catch(e){ alert("Allow mic"); }
+}
+document.body.addEventListener("click", start, {once:true});
 </script>
-
 </body>
 </html>
