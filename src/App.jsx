@@ -1,111 +1,38 @@
-import { useRef, useState, useEffect } from "react";
-
-export default function App() {
-  const canvasRef = useRef(null);
-  const analyserRef = useRef(null);
-  const streamRef = useRef(null);
-  const animRef = useRef(null);
-  const [recording, setRecording] = useState(false);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
-    const size = 320;
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = size * dpr;
-    canvas.height = size * dpr;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const center = size / 2;
-
-    function draw() {
-      ctx.clearRect(0, 0, size, size);
-      const data = new Uint8Array(128);
-      if (analyserRef.current) analyserRef.current.getByteFrequencyData(data);
-
-      // YOUR WHITE WAVE - OUTER DOTS
-      for (let i = 0; i < 180; i++) {
-        const a = (i / 180) * Math.PI * 2;
-        ctx.beginPath();
-        ctx.arc(center + Math.cos(a) * 105, center + Math.sin(a) * 105, 1.7, 0, Math.PI * 2);
-        ctx.fillStyle = "#FFF";
-        ctx.shadowBlur = 7;
-        ctx.shadowColor = "#FFF";
-        ctx.fill();
-      }
-      // INNER DOTS
-      for (let i = 0; i < 150; i++) {
-        const a = (i / 150) * Math.PI * 2;
-        ctx.beginPath();
-        ctx.arc(center + Math.cos(a) * 91, center + Math.sin(a) * 91, 1, 0, Math.PI * 2);
-        ctx.fillStyle = "#FFF";
-        ctx.shadowBlur = 0;
-        ctx.fill();
-      }
-      // BARS
-      for (let i = 0; i < 180; i++) {
-        const a = (i / 180) * Math.PI * 2;
-        const f = analyserRef.current ? data[Math.floor(i/180*128)]/255 : 0.15 + Math.sin(Date.now()/250 + i*0.3)*0.1;
-        const len = 5 + f * 48;
-        ctx.beginPath();
-        ctx.moveTo(center + Math.cos(a)*112, center + Math.sin(a)*112);
-        ctx.lineTo(center + Math.cos(a)*(112+len), center + Math.sin(a)*(112+len));
-        ctx.strokeStyle = "#FFF";
-        ctx.lineWidth = 2.5;
-        ctx.lineCap = "round";
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = "#FFF";
-        ctx.stroke();
-      }
-      ctx.shadowBlur = 0;
-      animRef.current = requestAnimationFrame(draw);
-    }
-    draw();
-    return () => cancelAnimationFrame(animRef.current);
-  }, []);
-
-  async function toggle() {
-    if (recording) {
-      streamRef.current?.getTracks().forEach(t=>t.stop());
-      analyserRef.current = null;
-      setRecording(false);
-      return;
-    }
-    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
-    streamRef.current = stream;
-    const ac = new AudioContext();
-    await ac.resume();
-    const an = ac.createAnalyser();
-    an.fftSize = 256;
-    ac.createMediaStreamSource(stream).connect(an);
-    analyserRef.current = an;
-    setRecording(true);
-  }
-
-  return (
-    <div style={{minHeight:"100vh",background:"#000",display:"flex",flexDirection:"column",alignItems:"center",paddingTop:60}}>
-      {/* THIS IS YOUR LENS BOX - NOW WITH WHITE WAVE IN MIDDLE */}
-      <div style={{width:"340px",height:"340px",background:"#0f0f0f",borderRadius:28,display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}>
-        <canvas ref={canvasRef} style={{width:"320px",height:"320px"}} />
-        <div style={{position:"absolute",bottom:18,color:"#666",fontSize:14}}>Tap lens</div>
-      </div>
-
-      <div style={{display:"flex",gap:50,marginTop:35,alignItems:"center"}}>
-        <button style={{width:56,height:56,borderRadius:16,background:"#1a1a1a",border:"none",color:"#fff"}}>⊞</button>
-        <button onClick={toggle} className="camBtn" style={{width:76,height:76,borderRadius:"50%",border:"3px solid #fff",background:"#2f88ff",display:"flex",alignItems:"center",justifyContent:"center"}}>
-          <div style={{width:recording?26:0,height:recording?26:0,background:recording?"#fff":"transparent",borderRadius:4}} />
-        </button>
-        <button style={{width:56,height:56,borderRadius:16,background:"#1a1a1a",border:"none",color:"#fff"}}>♪</button>
-      </div>
-
-      <button onClick={toggle} style={{marginTop:20,padding:"14px 30px",borderRadius:30,border:"none",background:"#fff",color:"#2f88ff",fontWeight:700}}>
-        {recording?"Stop recording":"Start recording"}
-      </button>
-
-      <style>{`
-        .camBtn{transform-box:fill-box;transform-origin:center}
-        .camBtn:active{animation:shutterClick 0.6s ease-in-out}
-        @keyframes shutterClick{0%{transform:scale(1)}30%{transform:scale(0.85)}60%{transform:scale(1.08)}100%{transform:scale(1)}}
-      `}</style>
-    </div>
-  )
-      }
+*{box-sizing:border-box}html,body,#root{margin:0;width:100%;height:100%;overflow:hidden;font-family:Arial,sans-serif}
+.findora-app{width:100%;height:100dvh;overflow:hidden;position:relative;touch-action:pan-y;background:#078eff}
+.findora-pages{display:flex;width:200%;height:100%;transition:transform 0.45s ease-in-out}
+.findora-page{width:50%;height:100%;flex-shrink:0;position:relative;overflow:hidden}
+.home-page{background:radial-gradient(circle at 40% 35%,#49c9ff 0%,transparent 45%),linear-gradient(135deg,#32baff,#0087ff)}
+.home-header{position:absolute;top:25px;left:30px;right:30px;display:flex;justify-content:space-between;color:white}
+.search-heading{display:flex;align-items:center;gap:12px;font-size:23px;font-weight:600}
+.search-heading span:first-child{font-size:43px}
+.menu-icon{background:none;border:none;color:white;font-size:36px}
+.home-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center}
+.visualizer-button{width:min(85vw,340px);aspect-ratio:1;border:none;background:transparent;cursor:pointer;display:grid;place-items:center}
+.visualizer-button canvas{width:100%;height:100%}
+.visualizer-button.active{animation:recordingPulse 1.5s infinite ease-in-out}
+@keyframes recordingPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+.recording-status{color:white;font-size:15px;margin-top:10px;letter-spacing:2px}
+.pagination{position:absolute;bottom:35px;left:50%;transform:translateX(-50%);display:flex;gap:17px}
+.pagination span{width:14px;height:14px;background:rgba(255,255,255,0.35);border-radius:50%}
+.pagination span.selected{background:white;transform:scale(1.15)}
+.camera-page{background:radial-gradient(ellipse at 50% 48%,rgba(130,112,80,0.75),transparent 65%),linear-gradient(140deg,#303238,#59544c,#22252c);color:white}
+.camera-header{position:absolute;top:25px;left:25px;right:25px;display:flex;justify-content:space-between;align-items:center}
+.camera-header h2{font-size:24px;letter-spacing:1px}
+.camera-header button{background:transparent;color:white;border:none;font-size:34px}
+.camera-center{position:absolute;top:46%;left:50%;transform:translate(-50%,-50%);width:90%;display:flex;flex-direction:column;align-items:center;text-align:center}
+.animated-camera{width:min(75vw,310px);animation:cameraFloat 2.5s ease-in-out infinite;filter:drop-shadow(0 0 15px rgba(0,125,255,0.3))}
+.animated-camera svg{width:100%;overflow:visible}
+@keyframes cameraFloat{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-8px) scale(1.035)}}
+.camera-preview{width:min(75vw,310px);aspect-ratio:1;object-fit:cover;border-radius:25px;border:3px solid #087bff}
+.camera-description{max-width:600px;margin-top:65px;font-size:17px;line-height:1.5}
+.privacy-text{font-size:16px;margin-top:8px}.privacy-text span{color:#65b8ff}
+.open-camera{width:min(90%,500px);min-height:68px;border:none;border-radius:50px;background:#b8d3ff;color:#003bb2;font-size:21px;font-weight:700;margin-top:65px;display:flex;justify-content:center;align-items:center;gap:25px}
+.camera-footer{position:absolute;bottom:45px;left:0;right:0;display:flex;justify-content:space-around;align-items:center}
+.gallery-button{width:85px;height:85px;border:none;border-radius:50%;background:rgba(0,0,0,0.55);color:white;font-size:40px}
+.search-button{width:145px;height:145px;border:10px solid rgba(0,130,255,0.3);border-radius:50%;background:#087bdb;color:white;font-size:65px}
+.camera-pagination{bottom:12px}
+/* camera button click */
+.camera-button{transform-box:fill-box;transform-origin:center}
+.camera-button:active{animation:shutterClick 0.6s ease-in-out}
+@keyframes shutterClick{0%{transform:scale(1)}30%{transform:scale(0.88)}60%{transform:scale(1.08)}100%{transform:scale(1)}}
