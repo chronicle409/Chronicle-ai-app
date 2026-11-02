@@ -6,113 +6,112 @@ export default function App() {
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
-    const size = 420;
-    const dpr = window.devicePixelRatio || 1;
+    const size = 340;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2); // limit to 2 for speed
     canvas.width = size * dpr;
     canvas.height = size * dpr;
     canvas.style.width = `${size}px`;
     canvas.style.height = `${size}px`;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.scale(dpr, dpr);
+    
     const cx = size / 2, cy = size / 2;
-    let frame, t = 0;
+    let raf;
+    let t = 0;
 
     function draw() {
       ctx.clearRect(0, 0, size, size);
 
-      // INNER DOTTED CIRCLE - 1
-      for (let i = 0; i < 180; i++) {
-        const a = (i / 180) * Math.PI * 2;
+      // INNER DOTTED RINGS - light, fast
+      ctx.fillStyle = "white";
+      for (let i = 0; i < 160; i++) {
+        const a = (i / 160) * Math.PI * 2;
         ctx.beginPath();
-        ctx.arc(cx + Math.cos(a) * 98, cy + Math.sin(a) * 98, 1.1, 0, Math.PI * 2);
-        ctx.fillStyle = "white";
-        ctx.globalAlpha = 0.85;
+        ctx.arc(cx + Math.cos(a) * 72, cy + Math.sin(a) * 72, 0.9, 0, Math.PI * 2);
+        ctx.globalAlpha = 0.9;
         ctx.fill();
       }
-      // INNER DOTTED CIRCLE - 2
-      for (let i = 0; i < 180; i++) {
-        const a = (i / 180) * Math.PI * 2;
+      for (let i = 0; i < 160; i++) {
+        const a = (i / 160) * Math.PI * 2;
         ctx.beginPath();
-        ctx.arc(cx + Math.cos(a) * 114, cy + Math.sin(a) * 114, 1.1, 0, Math.PI * 2);
-        ctx.fillStyle = "white";
+        ctx.arc(cx + Math.cos(a) * 86, cy + Math.sin(a) * 86, 0.9, 0, Math.PI * 2);
         ctx.globalAlpha = 0.85;
         ctx.fill();
       }
       ctx.globalAlpha = 1;
 
-      // OUTER WAVY BARS - exactly like your picture
-      for (let i = 0; i < 200; i++) {
-        const a = (i / 200) * Math.PI * 2;
-        // This creates the wavy organic shape from your image
-        const wave = Math.sin(a * 6 + t * 0.03) * 10 + Math.sin(a * 10 + t * 0.02) * 6 + Math.sin(a * 3 + t * 0.01) * 4;
-        const len = 28 + wave;
+      // OUTER WAVE - thin, smooth, not blobby
+      ctx.lineCap = "round";
+      ctx.strokeStyle = "white";
+      ctx.lineWidth = 2.2;
+      
+      for (let i = 0; i < 160; i++) {
+        const a = (i / 160) * Math.PI * 2;
+        // SMOOTH wave - slow sines
+        const wave = Math.sin(a * 4 + t * 0.02) * 12 
+                   + Math.sin(a * 7 + t * 0.015) * 6
+                   + Math.sin(a * 2 + t * 0.008) * 4;
+        const len = 18 + wave;
+        
+        const x1 = cx + Math.cos(a) * 96;
+        const y1 = cy + Math.sin(a) * 96;
+        const x2 = cx + Math.cos(a) * (96 + len);
+        const y2 = cy + Math.sin(a) * (96 + len);
+        
         ctx.beginPath();
-        ctx.moveTo(cx + Math.cos(a) * 124, cy + Math.sin(a) * 124);
-        ctx.lineTo(cx + Math.cos(a) * (124 + len), cy + Math.sin(a) * (124 + len));
-        ctx.strokeStyle = "white";
-        ctx.lineWidth = 2.6;
-        ctx.lineCap = "round";
-        ctx.shadowBlur = 18;
-        ctx.shadowColor = "white";
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
         ctx.stroke();
       }
-      ctx.shadowBlur = 0;
-      t++;
-      frame = requestAnimationFrame(draw);
+
+      t += 1;
+      raf = requestAnimationFrame(draw);
     }
     draw();
-    return () => cancelAnimationFrame(frame);
+    return () => cancelAnimationFrame(raf);
   }, []);
 
   return (
     <div className="screen">
-      <header className="top">
+      <header>
         <div className="search">⌕ Search</div>
-        <button className="menu">☰</button>
+        <div className="menu">☰</div>
       </header>
 
-      <div className="center">
-        <canvas ref={canvasRef} />
+      <div className="wrap">
+        <canvas ref={canvasRef} className="canvas" />
       </div>
 
-      <div className="dots">
-        <span className="on"></span>
-        <span></span>
-        <span></span>
-      </div>
+      <div className="dots"><span className="on"/><span/><span/></div>
 
       <style>{`
         *{margin:0;padding:0;box-sizing:border-box}
         .screen{
-          width:100%;height:100dvh;
-          background: #0090ff;
-          background: linear-gradient(180deg, #33b0ff 0%, #0a90ff 45%, #0088ff 100%);
-          position:relative;overflow:hidden;
-          font-family: system-ui, Arial;
+          width:100%;height:100dvh;height:100svh;
+          background: #1598ff;
+          display:flex;flex-direction:column;
+          overflow:hidden;
         }
-        .top{
-          position:absolute;top:0;left:0;right:0;
-          padding:18px 20px;
+        header{
+          height:56px;padding:0 18px;
           display:flex;justify-content:space-between;align-items:center;
-          color:white;z-index:10;
+          color:white;font-weight:600;
         }
-        .search{font-size:18px;font-weight:600;display:flex;gap:8px;align-items:center}
-        .menu{background:none;border:none;color:white;font-size:28px;opacity:0.95}
-        .center{
-          position:absolute;top:50%;left:50%;
-          transform:translate(-50%,-50%);
-          width:min(92vw, 440px);
-          aspect-ratio:1;
-          display:grid;place-items:center;
+        .search{font-size:17px}
+        .menu{font-size:26px}
+        .wrap{
+          flex:1;
+          display:flex;align-items:center;justify-content:center;
+          /* PERFECT CENTER */
         }
-        .center canvas{
-          width:100%;height:100%;
-          filter: drop-shadow(0 0 22px rgba(255,255,255,0.9));
+        .canvas{
+          width:min(84vw, 340px);height:min(84vw, 340px);
+          filter: drop-shadow(0 0 14px rgba(255,255,255,0.85)) drop-shadow(0 0 28px rgba(255,255,255,0.4));
         }
         .dots{
-          position:absolute;bottom:22px;left:50%;transform:translateX(-50%);
-          display:flex;gap:10px;align-items:center;
+          height:44px;display:flex;gap:10px;
+          align-items:center;justify-content:center;
         }
-        .dots span{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,0.35)}
+        .dots span{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.4)}
         .dots span.on{background:white;box-shadow:0 0 8px white}
       `}</style>
     </div>
