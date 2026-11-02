@@ -1,89 +1,17 @@
-import FindoraRecorder from "./FindoraRecorder"
+import { useRef, useState, useEffect } from "react";
 
 export default function App() {
-  return (
-    <div className="app">
-      <header className="app-header">
-        <div className="logo">
-          <div className="logo-icon">♪</div>
-          <span>FINDORA</span>
-        </div>
-      </header>
-
-      <main className="main-content">
-        <h2 className="title">Identify music instantly</h2>
-        <p className="subtitle">Tap to record and find your song</p>
-        
-        <FindoraRecorder />
-      </main>
-
-      <style>{`
-        * { margin:0; padding:0; box-sizing:border-box; }
-        .app {
-          min-height: 100vh;
-          background: #f8fbff;
-          font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-          display: flex;
-          flex-direction: column;
-        }
-        .app-header {
-          padding: 16px 20px;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-        .logo {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          color: #2f88ff;
-          font-weight: 800;
-          font-size: 18px;
-          letter-spacing: -0.5px;
-        }
-        .logo-icon {
-          width: 28px;
-          height: 28px;
-          background: #2f88ff;
-          color: white;
-          border-radius: 8px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .main-content {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          padding: 20px;
-          text-align: center;
-        }
-        .title {
-          color: #1a1a1a;
-          font-size: 24px;
-          font-weight: 700;
-          margin-top: 10px;
-        }
-        .subtitle {
-          color: #666;
-          font-size: 15px;
-          margin-top: 8px;
-          margin-bottom: 20px;
-        }
-      `}</style>
-    </div>
-  )
-}import React, { useRef, useState, useEffect } from "react";
-
-export default function FindoraRecorder() {
   const canvasRef = useRef(null);
   const analyserRef = useRef(null);
   const streamRef = useRef(null);
   const recorderRef = useRef(null);
   const chunksRef = useRef([]);
   const animRef = useRef(null);
+  const dotRef = useRef(null);
+  const flashRef = useRef(null);
+
   const [recording, setRecording] = useState(false);
+  const [started, setStarted] = useState(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -104,30 +32,31 @@ export default function FindoraRecorder() {
       const data = new Uint8Array(128);
       if (analyserRef.current) analyserRef.current.getByteFrequencyData(data);
 
+      // Wave audio - white dotted rings (middle)
       for (let i = 0; i < 180; i++) {
-        const angle = (i / 180) * Math.PI * 2;
+        const a = (i / 180) * Math.PI * 2;
         ctx.beginPath();
-        ctx.arc(center + Math.cos(angle) * radius, center + Math.sin(angle) * radius, 1.7, 0, Math.PI * 2);
+        ctx.arc(center + Math.cos(a) * radius, center + Math.sin(a) * radius, 1.7, 0, Math.PI * 2);
         ctx.fillStyle = "#FFFFFF";
         ctx.shadowBlur = 7;
         ctx.shadowColor = "#FFFFFF";
         ctx.fill();
       }
       for (let i = 0; i < 150; i++) {
-        const angle = (i / 150) * Math.PI * 2;
+        const a = (i / 150) * Math.PI * 2;
         ctx.beginPath();
-        ctx.arc(center + Math.cos(angle) * 91, center + Math.sin(angle) * 91, 1, 0, Math.PI * 2);
+        ctx.arc(center + Math.cos(a) * 91, center + Math.sin(a) * 91, 1, 0, Math.PI * 2);
         ctx.fillStyle = "#FFFFFF";
         ctx.shadowBlur = 0;
         ctx.fill();
       }
       for (let i = 0; i < 180; i++) {
-        const angle = (i / 180) * Math.PI * 2;
-        const frequency = analyserRef.current ? data[Math.floor((i / 180) * 128)] / 255 : 0.15 + Math.sin(Date.now() / 250 + i * 0.3) * 0.1;
-        const length = 5 + frequency * 48;
+        const a = (i / 180) * Math.PI * 2;
+        const f = analyserRef.current ? data[Math.floor((i/180)*128)]/255 : 0.12 + Math.sin(Date.now()/250 + i*0.3)*0.08;
+        const len = 5 + f * 48;
         ctx.beginPath();
-        ctx.moveTo(center + Math.cos(angle) * 112, center + Math.sin(angle) * 112);
-        ctx.lineTo(center + Math.cos(angle) * (112 + length), center + Math.sin(angle) * (112 + length));
+        ctx.moveTo(center + Math.cos(a)*112, center + Math.sin(a)*112);
+        ctx.lineTo(center + Math.cos(a)*(112+len), center + Math.sin(a)*(112+len));
         ctx.strokeStyle = "#FFFFFF";
         ctx.lineWidth = 2.5;
         ctx.lineCap = "round";
@@ -142,84 +71,114 @@ export default function FindoraRecorder() {
     return () => cancelAnimationFrame(animRef.current);
   }, []);
 
-  async function startRecording() {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
-      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      await audioContext.resume();
-      const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 256;
-      audioContext.createMediaStreamSource(stream).connect(analyser);
-      analyserRef.current = analyser;
-      const recorder = new MediaRecorder(stream);
-      recorderRef.current = recorder;
-      chunksRef.current = [];
-      recorder.ondataavailable = (e) => { if (e.data.size) chunksRef.current.push(e.data); };
-      recorder.start();
-      setRecording(true);
-    } catch { alert("Please allow microphone access."); }
+  async function handleClick() {
+    if (dotRef.current) {
+      dotRef.current.classList.remove("shutterClick");
+      void dotRef.current.offsetWidth;
+      dotRef.current.classList.add("shutterClick");
+    }
+    if (flashRef.current) {
+      flashRef.current.classList.remove("show");
+      void flashRef.current.offsetWidth;
+      flashRef.current.classList.add("show");
+    }
+
+    setTimeout(async () => {
+      setStarted(true);
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        streamRef.current = stream;
+        const ac = new (window.AudioContext || window.webkitAudioContext)();
+        await ac.resume();
+        const analyser = ac.createAnalyser();
+        analyser.fftSize = 256;
+        ac.createMediaStreamSource(stream).connect(analyser);
+        analyserRef.current = analyser;
+
+        const rec = new MediaRecorder(stream);
+        recorderRef.current = rec;
+        chunksRef.current = [];
+        rec.ondataavailable = e => { if(e.data.size) chunksRef.current.push(e.data); };
+        rec.start();
+        setRecording(true);
+      } catch { alert("Allow microphone"); }
+    }, 300);
   }
 
-  function stopRecording() {
+  function stop() {
     if (recorderRef.current?.state === "recording") {
       recorderRef.current.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: recorderRef.current.mimeType });
-        const url = URL.createObjectURL(blob);
-        console.log("Recording:", url);
+        console.log(URL.createObjectURL(blob));
       };
       recorderRef.current.stop();
     }
-    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current?.getTracks().forEach(t => t.stop());
     analyserRef.current = null;
     setRecording(false);
+    setStarted(false);
   }
 
   return (
-    <div className="recorder-wrapper">
-      <div className="visualizer-box">
-        <canvas ref={canvasRef} />
+    <div className="wrap">
+      {/* LENS STAGE - WAVE AUDIO IN MIDDLE */}
+      <div className="lensStage" onClick={!started ? handleClick : undefined}>
+        
+        {/* Your lens camera features */}
+        <svg className="cameraDeco" viewBox="0 0 300 270">
+          <path className="camera-body" d="M48 50 H97 L108 19 Q112 8 125 8 H180 Q193 8 197 20 L208 50 H253 Q280 50 280 78 V222 Q280 250 253 250 H48 Q20 250 20 222 V78 Q20 50 48 50 Z" />
+          <circle className="lensRing" cx="150" cy="145" r="64" />
+          <circle ref={flashRef} className="flash" cx="249" cy="89" r="85" />
+          <circle ref={dotRef} className="camera-button" cx="249" cy="89" r="12" fill="#2f88ff" />
+        </svg>
+
+        <div className={`waveBox ${started ? 'show' : ''}`}>
+          <canvas ref={canvasRef} />
+        </div>
+
+        {!started && <div className="hint">Tap lens</div>}
       </div>
-      <button onClick={recording ? stopRecording : startRecording} className="record-btn">
+
+      <div className="controls">
+        <button className="icon">◫</button>
+        <button onClick={started ? stop : handleClick} className={`shutter ${recording ? 'rec' : ''}`}>
+          {recording ? <div className="stop" /> : <div className="inner" />}
+        </button>
+        <button className="icon">♪</button>
+      </div>
+
+      <button className="label" onClick={started ? stop : handleClick}>
         {recording ? "Stop recording" : "Start recording"}
       </button>
 
       <style>{`
-        .recorder-wrapper {
-          width: 100%;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          margin-top: 10px;
-        }
-        .visualizer-box {
-          width: min(90vw, 340px);
-          aspect-ratio: 1;
-          background: #000;
-          border-radius: 28px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          overflow: hidden;
-        }
-        .visualizer-box canvas {
-          width: 100%;
-          height: 100%;
-        }
-        .record-btn {
-          margin-top: 22px;
-          padding: 14px 32px;
-          border: none;
-          border-radius: 30px;
-          background: white;
-          color: #2f88ff;
-          font-weight: 700;
-          font-size: 16px;
-          cursor: pointer;
-          box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-        }
-        .record-btn:active { transform: scale(0.96); }
+        *{margin:0;padding:0;box-sizing:border-box}
+        .wrap{min-height:100vh;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:system-ui}
+        
+        .lensStage{position:relative;width:min(92vw,360px);aspect-ratio:0.95;background:#000;border-radius:36px;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;border:1px solid #1a1a1a}
+        .cameraDeco{position:absolute;width:88%;height:88%;opacity:0.15;pointer-events:none}
+        .camera-body,.lensRing{fill:none;stroke:#2f88ff;stroke-width:18;stroke-linecap:round}
+        .flash{fill:#2f88ff;opacity:0;transform-origin:249px 89px}
+        .flash.show{animation:flashA 0.6s ease-out forwards}
+        @keyframes flashA{0%{opacity:0;transform:scale(0.1)}40%{opacity:0.3;transform:scale(0.8)}100%{opacity:0;transform:scale(1.8)}}
+
+        .camera-button{transform-box:fill-box;transform-origin:center;cursor:pointer;pointer-events:auto}
+        .camera-button.shutterClick{animation:shutterClick 0.6s ease-in-out}
+        @keyframes shutterClick{0%{transform:scale(1)}30%{transform:scale(0.88)}60%{transform:scale(1.08)}100%{transform:scale(1)}}
+
+        .waveBox{width:100%;height:100%;display:flex;align-items:center;justify-content:center;opacity:0;transform:scale(0.9);transition:0.5s}
+        .waveBox.show{opacity:1;transform:scale(1)}
+        .waveBox canvas{width:94%;height:94%}
+        .hint{position:absolute;bottom:24px;color:#fff;opacity:0.5;font-size:13px}
+
+        .controls{width:min(92vw,280px);display:flex;justify-content:space-between;align-items:center;margin-top:28px}
+        .icon{width:48px;height:48px;border-radius:14px;border:none;background:#111;color:#fff;font-size:18px}
+        .shutter{width:74px;height:74px;border-radius:50%;border:4px solid #2f88ff;background:#fff;display:flex;align-items:center;justify-content:center}
+        .shutter.rec{border-color:#ff3b30}
+        .inner{width:58px;height:58px;background:#2f88ff;border-radius:50%}
+        .stop{width:28px;height:28px;background:#ff3b30;border-radius:4px}
+        .label{margin-top:20px;padding:13px 30px;border:none;border-radius:30px;background:#fff;color:#2f88ff;font-weight:700;font-size:15px}
       `}</style>
     </div>
-  );
-      }
+  )
+}
