@@ -8,13 +8,12 @@ export default function App() {
   const audioContextRef = useRef(null);
 
   const [listening, setListening] = useState(false);
-  const [status, setStatus] = useState("Ready to listen");
 
+  const SIZE = 420;
+  const CENTER = 210;
   const COUNT = 180;
-  const SIZE = 390;
-  const CENTER = 195;
 
-  // Draw the animated circular waveform
+  // Circular voice animation
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -27,17 +26,17 @@ export default function App() {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     const smooth = new Array(COUNT).fill(0);
-    let frame;
+    const analyserData = new Uint8Array(1024);
+
+    let animationFrame;
 
     function draw() {
       ctx.clearRect(0, 0, SIZE, SIZE);
 
       const analyser = analyserRef.current;
-      let data = null;
 
       if (analyser) {
-        data = new Uint8Array(analyser.frequencyBinCount);
-        analyser.getByteFrequencyData(data);
+        analyser.getByteFrequencyData(analyserData);
       }
 
       const time = performance.now() / 1000;
@@ -47,76 +46,76 @@ export default function App() {
 
         let sound = 0;
 
-        if (data) {
+        if (analyser) {
           const index = Math.min(
-            data.length - 1,
-            Math.floor(2 + (i / COUNT) * 150)
+            analyserData.length - 1,
+            Math.floor(2 + Math.pow(i / COUNT, 1.5) * 250)
           );
 
-          sound = data[index] / 255;
+          sound = analyserData[index] / 255;
         }
 
-        smooth[i] += (sound - smooth[i]) * 0.3;
+        smooth[i] += (sound - smooth[i]) * 0.25;
 
-        const length = analyser
-          ? 5 + smooth[i] * 75
-          : 5 + Math.sin(time * 1.5 + i * 0.1) * 2;
+        const idleMovement =
+          3 + Math.sin(time * 2 + i * 0.12) * 2;
 
-        const inner = 135;
-        const outer = inner + length;
+        const barLength = analyser
+          ? 5 + smooth[i] * 95
+          : idleMovement;
 
-        const x1 = CENTER + Math.cos(angle) * inner;
-        const y1 = CENTER + Math.sin(angle) * inner;
-        const x2 = CENTER + Math.cos(angle) * outer;
-        const y2 = CENTER + Math.sin(angle) * outer;
+        const innerRadius = 145;
+        const outerRadius = innerRadius + barLength;
 
-        const hue = (i * 360 / COUNT + time * 45) % 360;
+        const x1 =
+          CENTER + Math.cos(angle) * innerRadius;
+        const y1 =
+          CENTER + Math.sin(angle) * innerRadius;
+
+        const x2 =
+          CENTER + Math.cos(angle) * outerRadius;
+        const y2 =
+          CENTER + Math.sin(angle) * outerRadius;
 
         ctx.beginPath();
         ctx.moveTo(x1, y1);
         ctx.lineTo(x2, y2);
 
-        ctx.strokeStyle = analyser
-          ? `hsl(${hue}, 100%, 72%)`
-          : "#ffffff";
-
-        ctx.lineWidth = 3;
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 3.5;
         ctx.lineCap = "round";
-        ctx.shadowBlur = analyser ? 13 : 5;
-        ctx.shadowColor = `hsl(${hue}, 100%, 70%)`;
+        ctx.shadowBlur = analyser ? 17 : 8;
+        ctx.shadowColor = "rgba(255,255,255,0.9)";
         ctx.stroke();
       }
 
       ctx.shadowBlur = 0;
 
-      [103, 124].forEach((radius) => {
+      // Inner dotted circles
+      [125, 105].forEach((radius) => {
         ctx.beginPath();
         ctx.arc(CENTER, CENTER, radius, 0, Math.PI * 2);
         ctx.setLineDash([1, 5]);
-        ctx.strokeStyle = "rgba(255,255,255,0.9)";
+        ctx.strokeStyle = "rgba(255,255,255,0.95)";
         ctx.lineWidth = 2.5;
         ctx.stroke();
       });
 
       ctx.setLineDash([]);
 
-      frame = requestAnimationFrame(draw);
+      animationFrame = requestAnimationFrame(draw);
     }
 
     draw();
 
-    return () => cancelAnimationFrame(frame);
+    return () => cancelAnimationFrame(animationFrame);
   }, []);
 
   // Start microphone
-  async function startListening() {
-    setStatus("Button working! Requesting microphone...");
-
+  async function startMicrophone() {
     try {
       if (!navigator.mediaDevices?.getUserMedia) {
-        throw new Error(
-          "Microphone unavailable. Open FINDORA using HTTPS in Chrome."
-        );
+        throw new Error("Microphone is unavailable in this browser.");
       }
 
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -137,32 +136,32 @@ export default function App() {
 
       await audioContext.resume();
 
-      const source = audioContext.createMediaStreamSource(stream);
+      const source =
+        audioContext.createMediaStreamSource(stream);
+
       const analyser = audioContext.createAnalyser();
 
       analyser.fftSize = 2048;
-      analyser.smoothingTimeConstant = 0.75;
+      analyser.smoothingTimeConstant = 0.7;
 
       source.connect(analyser);
 
       analyserRef.current = analyser;
-
       setListening(true);
-      setStatus("Listening... Speak now!");
 
     } catch (error) {
       console.error("FINDORA microphone error:", error);
 
-      stopListening(
-        "Microphone error: " + error.message
-      );
+      alert("Microphone error: " + error.message);
+
+      stopMicrophone();
     }
   }
 
   // Stop microphone
-  function stopListening(message = "Ready to listen") {
+  function stopMicrophone() {
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
 
@@ -172,24 +171,23 @@ export default function App() {
     }
 
     analyserRef.current = null;
-
     setListening(false);
-    setStatus(message);
   }
 
-  function toggleMicrophone() {
+  // Tap the waveform to start or stop
+  function handleScreenTap() {
     if (listening) {
-      stopListening("Microphone stopped.");
+      stopMicrophone();
     } else {
-      startListening();
+      startMicrophone();
     }
   }
 
-  // Clean up when the component closes
+  // Clean up when leaving the page
   useEffect(() => {
     return () => {
       if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current.getTracks().forEach(track => track.stop());
       }
 
       if (audioContextRef.current) {
@@ -200,41 +198,29 @@ export default function App() {
 
   return (
     <main style={styles.page}>
+
       <header style={styles.header}>
         <div style={styles.search}>⌕ Search</div>
-        <button style={styles.menu} aria-label="Menu">
-          ☰
-        </button>
+        <div style={styles.menu}>☰</div>
       </header>
 
-      <section style={styles.center}>
-        <button
-          type="button"
-          onClick={toggleMicrophone}
-          style={styles.waveButton}
-          aria-label="Toggle microphone"
-        >
-          <canvas
-            ref={canvasRef}
-            style={styles.canvas}
-          />
-        </button>
-
-        <p style={styles.status} aria-live="polite">
-          {status}
-        </p>
-
-        <button
-          type="button"
-          onClick={toggleMicrophone}
-          style={{
-            ...styles.micButton,
-            ...(listening ? styles.activeMic : {})
-          }}
-          aria-label={listening ? "Stop microphone" : "Start microphone"}
-        >
-          {listening ? "■" : "🎤"}
-        </button>
+      <section
+        style={styles.waveArea}
+        onClick={handleScreenTap}
+        role="button"
+        tabIndex={0}
+        aria-label="Tap to start or stop microphone"
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            handleScreenTap();
+          }
+        }}
+      >
+        <canvas
+          ref={canvasRef}
+          style={styles.canvas}
+        />
       </section>
 
       <footer style={styles.dots}>
@@ -242,25 +228,27 @@ export default function App() {
         <span style={styles.dot}></span>
         <span style={styles.dot}></span>
       </footer>
+
     </main>
   );
 }
 
 const styles = {
   page: {
-    background: "#087ff5",
-    minHeight: "100vh",
     width: "100%",
+    height: "100dvh",
+    minHeight: "100vh",
+    background: "#1598F7",
     display: "flex",
     flexDirection: "column",
-    fontFamily: "Arial, sans-serif",
-    overflow: "hidden"
+    overflow: "hidden",
+    fontFamily: "Arial, sans-serif"
   },
 
   header: {
-    height: "65px",
-    minHeight: "65px",
-    padding: "0 22px",
+    height: "75px",
+    minHeight: "75px",
+    padding: "0 25px",
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
@@ -268,92 +256,58 @@ const styles = {
   },
 
   search: {
-    fontSize: "23px",
+    fontSize: "25px",
     fontWeight: "bold"
   },
 
   menu: {
-    background: "transparent",
-    border: "none",
+    fontSize: "34px",
+    lineHeight: 1,
     color: "white",
-    fontSize: "30px",
     cursor: "pointer"
   },
 
-  center: {
+  waveArea: {
     flex: 1,
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center"
-  },
-
-  waveButton: {
-    width: "min(85vw, 350px)",
-    aspectRatio: "1",
-    border: "none",
-    padding: 0,
-    background: "transparent",
-    cursor: "pointer",
-    touchAction: "manipulation"
-  },
-
-  canvas: {
     width: "100%",
-    height: "100%",
-    display: "block",
-    pointerEvents: "none"
-  },
-
-  status: {
-    color: "white",
-    fontSize: "14px",
-    fontWeight: "bold",
-    textAlign: "center",
-    margin: "10px 15px 18px",
-    minHeight: "20px"
-  },
-
-  micButton: {
-    width: "76px",
-    height: "76px",
-    borderRadius: "50%",
-    border: "3px solid white",
-    background: "#0865d9",
-    color: "white",
-    fontSize: "30px",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
     cursor: "pointer",
     touchAction: "manipulation",
-    boxShadow: "0 0 20px rgba(255,255,255,0.35)"
+    WebkitTapHighlightColor: "transparent",
+    outline: "none"
   },
 
-  activeMic: {
-    background: "white",
-    color: "#087ff5"
+  canvas: {
+    width: "min(90vw, 420px)",
+    height: "auto",
+    aspectRatio: "1 / 1",
+    display: "block",
+    pointerEvents: "none"
   },
 
   dots: {
-    height: "45px",
+    height: "65px",
+    minHeight: "65px",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    gap: "12px"
+    gap: "17px"
   },
 
   dot: {
-    width: "8px",
-    height: "8px",
+    width: "12px",
+    height: "12px",
     borderRadius: "50%",
-    background: "rgba(255,255,255,0.4)"
+    background: "rgba(255,255,255,0.35)"
   },
 
   activeDot: {
-    width: "8px",
-    height: "8px",
+    width: "13px",
+    height: "13px",
     borderRadius: "50%",
-    background: "white"
+    background: "white",
+    boxShadow: "0 0 15px white"
   }
 };
