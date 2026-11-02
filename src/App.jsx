@@ -116,7 +116,9 @@ header{
     <canvas id="findoraCanvas"></canvas>
   </button>
 
-  <div id="findoraStatus">Ready to listen</div>
+<div id="findoraStatus" style="background:white;color:blue;padding:20px;border-radius:15px;font-size:20px;">
+  FINDORA TEST SUCCESSFUL
+</div>
 
   <button id="micButton" type="button" aria-label="Start microphone">
     🎤
