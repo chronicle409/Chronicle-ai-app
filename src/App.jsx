@@ -32,11 +32,14 @@ header{height:56px;padding:0 18px;display:flex;justify-content:space-between;ali
   border-radius: 50%;
   cursor: pointer;
   padding: 0;
-  -webkit-tap-highlight-color: transparent;
-  /* glow moved to CSS = smooth */
+  position: relative;
+  z-index: 10;
   filter: drop-shadow(0 0 12px rgba(255,255,255,0.7));
 }
-canvas { width: 100%; height: 100%; overflow: visible; }
+#wave{
+  width:100%;height:100%;
+  pointer-events: none; /* <-- THIS FIXES TAP */
+}
 #status { margin-top: 20px; font-size: 18px; font-weight: 600; }
 #hint { font-size: 13px; opacity: .8; margin-top: 8px; }
 .dots{height:44px;display:flex;gap:10px;justify-content:center;align-items:center}
@@ -49,7 +52,7 @@ canvas { width: 100%; height: 100%; overflow: visible; }
 <header><div class="search">⌕ Search</div><div class="menu">☰</div></header>
 
 <div class="voice-container">
-  <button id="voiceButton">
+  <button id="voiceButton" type="button">
     <canvas id="wave"></canvas>
   </button>
   <div id="status">Tap to start listening</div>
@@ -76,9 +79,11 @@ function resizeCanvas() {
 resizeCanvas();
 
 async function startListening() {
+  console.log("TAP DETECTED - starting");
+  if(navigator.vibrate) navigator.vibrate(50);
   try {
     status.textContent = "Requesting microphone...";
-    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation:true } });
     audioContext = new (window.AudioContext || window.webkitAudioContext)();
     await audioContext.resume();
     microphone = audioContext.createMediaStreamSource(stream);
@@ -89,15 +94,28 @@ async function startListening() {
     dataArray = new Uint8Array(analyser.frequencyBinCount);
     listening = true;
     status.textContent = "Listening...";
-  } catch { status.textContent = "Microphone permission required"; }
+    console.log("Listening started");
+  } catch (e) {
+    console.error(e);
+    status.textContent = "Mic blocked - Check browser permission";
+    alert("Microphone blocked. On iPhone: Settings > Safari > Microphone > Allow. Must be HTTPS.");
+  }
 }
 function stopListening() {
   listening = false;
-  stream?.getTracks().forEach(t => t.stop());
-  audioContext?.close();
+  if(stream) stream.getTracks().forEach(t => t.stop());
+  if(audioContext) audioContext.close();
   status.textContent = "Tap to start listening";
 }
-button.addEventListener("click", () => listening ? stopListening() : startListening());
+
+// FIX: use both touch and click
+function handleTap(e){
+  e.preventDefault();
+  console.log("Button tapped");
+  listening ? stopListening() : startListening();
+}
+button.addEventListener("touchstart", handleTap, {passive:false});
+button.addEventListener("click", handleTap);
 
 function draw() {
   requestAnimationFrame(draw);
@@ -118,10 +136,8 @@ function draw() {
     const hue = (i * 360 / bars + time) % 360;
     ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
     ctx.strokeStyle = `hsl(${hue}, 100%, 70%)`;
-    ctx.lineWidth = 3; ctx.lineCap = "round";
-    ctx.stroke();
+    ctx.lineWidth = 3; ctx.lineCap = "round"; ctx.stroke();
   }
-  // center
   ctx.beginPath(); ctx.arc(cx, cy, 48, 0, Math.PI * 2); ctx.fillStyle = "#087ff5"; ctx.fill();
   for (let i = 0; i < 3; i++) {
     const x = cx + (i - 1) * 13, y = cy + Math.sin(time * 0.06 + i) * 3;
