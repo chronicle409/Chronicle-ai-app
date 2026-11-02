@@ -56,12 +56,11 @@ header{
 #findoraStatus{
   color:white;
   font-size:15px;
-  margin:10px 0 18px;
+  margin:10px 15px 18px;
   font-weight:bold;
   text-align:center;
+  min-height:20px;
 }
-
-/* NEW MICROPHONE BUTTON */
 
 #micButton{
   width:76px;
@@ -81,9 +80,8 @@ header{
 }
 
 #micButton.active{
-  background:#ffffff;
+  background:white;
   color:#087ff5;
-  box-shadow:0 0 25px white;
 }
 
 .dots{
@@ -114,7 +112,7 @@ header{
 
 <div class="findora-wave-wrap">
 
-  <button id="findoraListen" type="button">
+  <button id="findoraListen" type="button" aria-label="Toggle listening">
     <canvas id="findoraCanvas"></canvas>
   </button>
 
@@ -133,174 +131,186 @@ header{
 </div>
 
 <script>
-const canvas=document.getElementById("findoraCanvas");
-const ctx=canvas.getContext("2d");
-const status=document.getElementById("findoraStatus");
-const micButton=document.getElementById("micButton");
+const canvas = document.getElementById("findoraCanvas");
+const ctx = canvas.getContext("2d");
+const statusText = document.getElementById("findoraStatus");
+const micButton = document.getElementById("micButton");
+const waveButton = document.getElementById("findoraListen");
 
-const SIZE=390;
-const CENTER=195;
-const COUNT=180;
+const SIZE = 390;
+const CENTER = 195;
+const COUNT = 180;
 
-let listening=false;
-let stream=null;
-let audioContext=null;
-let analyser=null;
-let audioData=null;
+let listening = false;
+let stream = null;
+let audioContext = null;
+let analyser = null;
+let audioData = null;
+let smooth = new Array(COUNT).fill(0);
 
-let smooth=new Array(COUNT).fill(0);
+const dpr = Math.min(window.devicePixelRatio || 1, 2);
+canvas.width = SIZE * dpr;
+canvas.height = SIZE * dpr;
+ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-const dpr=Math.min(devicePixelRatio||1,2);
-canvas.width=SIZE*dpr;
-canvas.height=SIZE*dpr;
-ctx.setTransform(dpr,0,0,dpr,0,0);
+async function startListening() {
 
-async function startListening(){
+  statusText.textContent = "Button tapped! Requesting microphone...";
 
-  try{
+  try {
 
-    status.textContent="Requesting microphone...";
-
-    if(!navigator.mediaDevices?.getUserMedia){
-      throw new Error("Use an HTTPS page in Chrome.");
+    if (!navigator.mediaDevices ||
+        !navigator.mediaDevices.getUserMedia) {
+      throw new Error(
+        "Microphone is unavailable. Open FINDORA in Chrome using HTTPS."
+      );
     }
 
-    stream=await navigator.mediaDevices.getUserMedia({
-      audio:true
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: true
     });
 
-    audioContext=new(window.AudioContext||
-      window.webkitAudioContext)();
+    const AudioContextClass =
+      window.AudioContext || window.webkitAudioContext;
 
+    if (!AudioContextClass) {
+      throw new Error("Your browser does not support audio processing.");
+    }
+
+    audioContext = new AudioContextClass();
     await audioContext.resume();
 
-    const source=
-      audioContext.createMediaStreamSource(stream);
+    const source = audioContext.createMediaStreamSource(stream);
 
-    analyser=audioContext.createAnalyser();
-    analyser.fftSize=2048;
-    analyser.smoothingTimeConstant=0.75;
+    analyser = audioContext.createAnalyser();
+    analyser.fftSize = 2048;
+    analyser.smoothingTimeConstant = 0.75;
 
     source.connect(analyser);
 
-    audioData=new Uint8Array(analyser.frequencyBinCount);
+    audioData = new Uint8Array(analyser.frequencyBinCount);
 
-    listening=true;
+    listening = true;
 
-    status.textContent="Listening... Speak now!";
-    micButton.textContent="⏹";
+    statusText.textContent = "Listening... Speak now!";
+    micButton.textContent = "⏹";
     micButton.classList.add("active");
 
-  }catch(error){
+  } catch (error) {
 
-    console.error(error);
-    status.textContent="Microphone error: "+error.message;
-    stopListening();
+    console.error("FINDORA microphone error:", error);
 
+    stopListening(
+      "Microphone error: " + error.message
+    );
   }
 }
 
-function stopListening(){
+function stopListening(message = "Ready to listen") {
 
-  listening=false;
+  listening = false;
 
-  if(stream){
-    stream.getTracks().forEach(track=>track.stop());
-    stream=null;
+  if (stream) {
+    stream.getTracks().forEach(track => track.stop());
+    stream = null;
   }
 
-  if(audioContext){
+  if (audioContext) {
     audioContext.close();
-    audioContext=null;
+    audioContext = null;
   }
 
-  analyser=null;
-  audioData=null;
+  analyser = null;
+  audioData = null;
   smooth.fill(0);
 
-  status.textContent="Ready to listen";
-  micButton.textContent="🎤";
+  statusText.textContent = message;
+  micButton.textContent = "🎤";
   micButton.classList.remove("active");
 }
 
-micButton.addEventListener("click",()=>{
-  if(listening){
-    stopListening();
-  }else{
+function toggleMicrophone() {
+
+  if (listening) {
+    stopListening("Microphone stopped.");
+  } else {
     startListening();
   }
+}
+
+micButton.addEventListener("click", toggleMicrophone);
+waveButton.addEventListener("click", toggleMicrophone);
+
+// Show an error if another JavaScript problem occurs.
+window.addEventListener("error", function(event) {
+  statusText.textContent = "Page error: " + event.message;
 });
 
-// Waveform is also tappable
-document.getElementById("findoraListen")
-.addEventListener("click",()=>{
-  if(listening){
-    stopListening();
-  }else{
-    startListening();
-  }
-});
-
-function draw(){
+function draw() {
 
   requestAnimationFrame(draw);
-  ctx.clearRect(0,0,SIZE,SIZE);
 
-  if(listening && analyser){
+  ctx.clearRect(0, 0, SIZE, SIZE);
+
+  if (listening && analyser && audioData) {
     analyser.getByteFrequencyData(audioData);
   }
 
-  const time=performance.now()*0.001;
+  const time = performance.now() * 0.001;
 
-  for(let i=0;i<COUNT;i++){
+  for (let i = 0; i < COUNT; i++) {
 
-    const angle=i/COUNT*Math.PI*2;
-    let sound=0;
+    const angle = i / COUNT * Math.PI * 2;
+    let sound = 0;
 
-    if(listening && audioData){
-      const index=Math.floor(2+i/COUNT*150);
-      sound=audioData[index]/255;
+    if (listening && audioData) {
+      const index = Math.min(
+        audioData.length - 1,
+        Math.floor(2 + i / COUNT * 150)
+      );
+
+      sound = audioData[index] / 255;
     }
 
-    smooth[i]+=(sound-smooth[i])*0.3;
+    smooth[i] += (sound - smooth[i]) * 0.3;
 
-    const length=listening
-      ?5+smooth[i]*65
-      :5+Math.sin(time*1.5+i*.1)*2;
+    const length = listening
+      ? 5 + smooth[i] * 65
+      : 5 + Math.sin(time * 1.5 + i * 0.1) * 2;
 
-    const inner=135;
-    const outer=inner+length;
+    const inner = 135;
+    const outer = inner + length;
 
-    const x1=CENTER+Math.cos(angle)*inner;
-    const y1=CENTER+Math.sin(angle)*inner;
-    const x2=CENTER+Math.cos(angle)*outer;
-    const y2=CENTER+Math.sin(angle)*outer;
+    const x1 = CENTER + Math.cos(angle) * inner;
+    const y1 = CENTER + Math.sin(angle) * inner;
+    const x2 = CENTER + Math.cos(angle) * outer;
+    const y2 = CENTER + Math.sin(angle) * outer;
 
-    const hue=(i*360/COUNT+time*40)%360;
+    const hue = (i * 360 / COUNT + time * 40) % 360;
 
     ctx.beginPath();
-    ctx.moveTo(x1,y1);
-    ctx.lineTo(x2,y2);
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
 
-    ctx.strokeStyle=listening
-      ?`hsl(${hue},100%,72%)`
-      :"white";
+    ctx.strokeStyle = listening
+      ? `hsl(${hue},100%,72%)`
+      : "white";
 
-    ctx.lineWidth=3;
-    ctx.lineCap="round";
-    ctx.shadowBlur=listening?13:5;
-    ctx.shadowColor=`hsl(${hue},100%,70%)`;
+    ctx.lineWidth = 3;
+    ctx.lineCap = "round";
+    ctx.shadowBlur = listening ? 13 : 5;
+    ctx.shadowColor = `hsl(${hue},100%,70%)`;
     ctx.stroke();
   }
 
-  ctx.shadowBlur=0;
+  ctx.shadowBlur = 0;
 
-  [103,124].forEach(radius=>{
+  [103, 124].forEach(radius => {
     ctx.beginPath();
-    ctx.arc(CENTER,CENTER,radius,0,Math.PI*2);
-    ctx.setLineDash([1,5]);
-    ctx.strokeStyle="rgba(255,255,255,.9)";
-    ctx.lineWidth=2.5;
+    ctx.arc(CENTER, CENTER, radius, 0, Math.PI * 2);
+    ctx.setLineDash([1, 5]);
+    ctx.strokeStyle = "rgba(255,255,255,.9)";
+    ctx.lineWidth = 2.5;
     ctx.stroke();
   });
 
