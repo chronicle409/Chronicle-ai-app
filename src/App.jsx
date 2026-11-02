@@ -10,10 +10,10 @@ export default function App() {
   const [listening, setListening] = useState(false);
 
   const SIZE = 420;
-  const CENTER = 210;
-  const COUNT = 180;
+  const CENTER = SIZE / 2;
+  const COUNT = 220;
 
-  // Circular voice animation
+  // Draw the glowing waveform animation
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -26,7 +26,7 @@ export default function App() {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     const smooth = new Array(COUNT).fill(0);
-    const analyserData = new Uint8Array(1024);
+    const audioData = new Uint8Array(1024);
 
     let animationFrame;
 
@@ -36,72 +36,73 @@ export default function App() {
       const analyser = analyserRef.current;
 
       if (analyser) {
-        analyser.getByteFrequencyData(analyserData);
+        analyser.getByteFrequencyData(audioData);
       }
 
       const time = performance.now() / 1000;
 
+      // Circular waveform bars
       for (let i = 0; i < COUNT; i++) {
         const angle = (i / COUNT) * Math.PI * 2;
+
+        // Four large moving wave peaks
+        const wave =
+          Math.pow((1 + Math.sin(angle * 4 - time * 2)) / 2, 2);
 
         let sound = 0;
 
         if (analyser) {
           const index = Math.min(
-            analyserData.length - 1,
-            Math.floor(2 + Math.pow(i / COUNT, 1.5) * 250)
+            audioData.length - 1,
+            Math.floor(2 + (i / COUNT) * 250)
           );
 
-          sound = analyserData[index] / 255;
+          sound = audioData[index] / 255;
         }
 
         smooth[i] += (sound - smooth[i]) * 0.25;
 
-        const idleMovement =
-          3 + Math.sin(time * 2 + i * 0.12) * 2;
+        const idleLength = 9 + wave * 32;
 
         const barLength = analyser
-          ? 5 + smooth[i] * 95
-          : idleMovement;
+          ? idleLength + smooth[i] * 55
+          : idleLength;
 
         const innerRadius = 145;
         const outerRadius = innerRadius + barLength;
 
-        const x1 =
-          CENTER + Math.cos(angle) * innerRadius;
-        const y1 =
-          CENTER + Math.sin(angle) * innerRadius;
+        const x1 = CENTER + Math.cos(angle) * innerRadius;
+        const y1 = CENTER + Math.sin(angle) * innerRadius;
 
-        const x2 =
-          CENTER + Math.cos(angle) * outerRadius;
-        const y2 =
-          CENTER + Math.sin(angle) * outerRadius;
+        const x2 = CENTER + Math.cos(angle) * outerRadius;
+        const y2 = CENTER + Math.sin(angle) * outerRadius;
 
         ctx.beginPath();
         ctx.moveTo(x1, y1);
         ctx.lineTo(x2, y2);
 
-        ctx.strokeStyle = "#ffffff";
-        ctx.lineWidth = 3.5;
+        ctx.strokeStyle = "rgba(255,255,255,0.98)";
+        ctx.lineWidth = 3.2;
         ctx.lineCap = "round";
-        ctx.shadowBlur = analyser ? 17 : 8;
-        ctx.shadowColor = "rgba(255,255,255,0.9)";
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = "rgba(255,255,255,0.95)";
         ctx.stroke();
       }
 
       ctx.shadowBlur = 0;
 
-      // Inner dotted circles
-      [125, 105].forEach((radius) => {
+      // Glowing circular rings
+      [118, 140].forEach((radius) => {
         ctx.beginPath();
         ctx.arc(CENTER, CENTER, radius, 0, Math.PI * 2);
-        ctx.setLineDash([1, 5]);
-        ctx.strokeStyle = "rgba(255,255,255,0.95)";
-        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = "rgba(255,255,255,0.75)";
+        ctx.lineWidth = 1.8;
+        ctx.shadowBlur = 9;
+        ctx.shadowColor = "white";
         ctx.stroke();
       });
 
-      ctx.setLineDash([]);
+      ctx.shadowBlur = 0;
 
       animationFrame = requestAnimationFrame(draw);
     }
@@ -111,11 +112,10 @@ export default function App() {
     return () => cancelAnimationFrame(animationFrame);
   }, []);
 
-  // Start microphone
   async function startMicrophone() {
     try {
       if (!navigator.mediaDevices?.getUserMedia) {
-        throw new Error("Microphone is unavailable in this browser.");
+        throw new Error("Microphone access is unavailable.");
       }
 
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -127,38 +127,28 @@ export default function App() {
       const AudioContextClass =
         window.AudioContext || window.webkitAudioContext;
 
-      if (!AudioContextClass) {
-        throw new Error("Audio processing is not supported.");
-      }
-
       const audioContext = new AudioContextClass();
       audioContextRef.current = audioContext;
 
       await audioContext.resume();
 
-      const source =
-        audioContext.createMediaStreamSource(stream);
-
+      const source = audioContext.createMediaStreamSource(stream);
       const analyser = audioContext.createAnalyser();
 
       analyser.fftSize = 2048;
       analyser.smoothingTimeConstant = 0.7;
 
       source.connect(analyser);
-
       analyserRef.current = analyser;
-      setListening(true);
 
+      setListening(true);
     } catch (error) {
       console.error("FINDORA microphone error:", error);
-
       alert("Microphone error: " + error.message);
-
       stopMicrophone();
     }
   }
 
-  // Stop microphone
   function stopMicrophone() {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
@@ -174,8 +164,7 @@ export default function App() {
     setListening(false);
   }
 
-  // Tap the waveform to start or stop
-  function handleScreenTap() {
+  function toggleMicrophone() {
     if (listening) {
       stopMicrophone();
     } else {
@@ -183,7 +172,6 @@ export default function App() {
     }
   }
 
-  // Clean up when leaving the page
   useEffect(() => {
     return () => {
       if (streamRef.current) {
@@ -204,23 +192,26 @@ export default function App() {
         <div style={styles.menu}>☰</div>
       </header>
 
-      <section
-        style={styles.waveArea}
-        onClick={handleScreenTap}
-        role="button"
-        tabIndex={0}
-        aria-label="Tap to start or stop microphone"
-        onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            handleScreenTap();
-          }
-        }}
-      >
-        <canvas
-          ref={canvasRef}
-          style={styles.canvas}
-        />
+      <section style={styles.center}>
+
+        <button
+          type="button"
+          onClick={toggleMicrophone}
+          style={styles.waveButton}
+          aria-label={listening ? "Stop listening" : "Start listening"}
+        >
+          <canvas
+            ref={canvasRef}
+            style={styles.canvas}
+          />
+
+          <img
+            src="/findora-logo.jpg"
+            alt="FINDORA"
+            style={styles.logo}
+          />
+        </button>
+
       </section>
 
       <footer style={styles.dots}>
@@ -262,28 +253,44 @@ const styles = {
 
   menu: {
     fontSize: "34px",
-    lineHeight: 1,
-    color: "white",
-    cursor: "pointer"
+    color: "white"
   },
 
-  waveArea: {
+  center: {
     flex: 1,
-    width: "100%",
     display: "flex",
     justifyContent: "center",
-    alignItems: "center",
+    alignItems: "center"
+  },
+
+  waveButton: {
+    width: "min(94vw, 420px)",
+    aspectRatio: "1 / 1",
+    position: "relative",
+    border: "none",
+    padding: 0,
+    background: "transparent",
     cursor: "pointer",
     touchAction: "manipulation",
-    WebkitTapHighlightColor: "transparent",
-    outline: "none"
+    WebkitTapHighlightColor: "transparent"
   },
 
   canvas: {
-    width: "min(90vw, 420px)",
-    height: "auto",
-    aspectRatio: "1 / 1",
+    width: "100%",
+    height: "100%",
     display: "block",
+    pointerEvents: "none"
+  },
+
+  logo: {
+    position: "absolute",
+    width: "31%",
+    height: "31%",
+    left: "50%",
+    top: "50%",
+    transform: "translate(-50%, -50%)",
+    objectFit: "contain",
+    mixBlendMode: "screen",
     pointerEvents: "none"
   },
 
