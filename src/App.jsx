@@ -3,126 +3,70 @@ import React, { useEffect, useRef, useState } from "react";
 
 export default function App() {
   const canvasRef = useRef(null);
-  const analyserRef = useRef(null);
-  const streamRef = useRef(null);
   const audioRef = useRef(null);
-  const [listening, setListening] = useState(false);
+  const streamRef = useRef(null);
+  const animationRef = useRef(null);
 
-  // Lightweight flowing waveform animation
+  const [recording, setRecording] = useState(false);
+  const [page, setPage] = useState(0);
+
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
+    let frame = 0;
 
-    const W = 600;
-    const H = 300;
-    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    function draw() {
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
 
-    canvas.width = W * dpr;
-    canvas.height = H * dpr;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      frame += 0.018;
 
-    let frame;
-    let volume = 0;
-    const samples = 120;
-    const audioSamples = new Uint8Array(1024);
+      const analyser = audioRef.current;
+      let volume = 0;
 
-    function drawWave(time, amplitude, phase, opacity, color1, color2) {
-      const middle = H / 2;
-
-      const gradient = ctx.createLinearGradient(0, 0, 0, H);
-      gradient.addColorStop(0, color1);
-      gradient.addColorStop(1, color2);
-
-      ctx.beginPath();
-      ctx.moveTo(0, middle);
-
-      for (let i = 0; i <= samples; i++) {
-        const x = (i / samples) * W;
-        const progress = i / samples;
-
-        const wave =
-          Math.sin(progress * Math.PI * 4 + time * 1.8 + phase) *
-          0.65 +
-          Math.sin(progress * Math.PI * 2.2 - time * 1.2 + phase) *
-          0.35;
-
-        const envelope =
-          0.25 + Math.pow(Math.sin(progress * Math.PI), 0.8) * 0.75;
-
-        const y =
-          middle +
-          wave * amplitude * envelope;
-
-        ctx.lineTo(x, y);
+      if (analyser && recording) {
+        const data = new Uint8Array(analyser.frequencyBinCount);
+        analyser.getByteFrequencyData(data);
+        volume = data.reduce((a, b) => a + b, 0) /
+          data.length / 255;
       }
 
-      ctx.lineTo(W, middle);
-      ctx.lineTo(0, middle);
-      ctx.closePath();
+      for (let layer = 0; layer < 5; layer++) {
+        ctx.beginPath();
 
-      ctx.globalAlpha = opacity;
-      ctx.fillStyle = gradient;
-      ctx.fill();
-      ctx.globalAlpha = 1;
-    }
+        for (let x = 0; x <= w; x += 3) {
+          const center = h / 2;
+          const wave =
+            Math.sin(x * 0.018 + frame + layer * 0.45) *
+            (18 + volume * 65) +
+            Math.sin(x * 0.035 - frame * 1.4) * 12;
 
-    function animate() {
-      const time = performance.now() / 1000;
+          const y = center + wave * (1 - layer * 0.12);
 
-      ctx.clearRect(0, 0, W, H);
-
-      const analyser = analyserRef.current;
-
-      let targetVolume = 0;
-
-      if (analyser) {
-        analyser.getByteTimeDomainData(audioSamples);
-
-        let sum = 0;
-
-        for (let i = 0; i < audioSamples.length; i++) {
-          const value = (audioSamples[i] - 128) / 128;
-          sum += value * value;
+          if (x === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
         }
 
-        targetVolume = Math.sqrt(sum / audioSamples.length);
+        ctx.strokeStyle = `rgba(255,255,255,${0.7 - layer * 0.1})`;
+        ctx.lineWidth = 2;
+        ctx.stroke();
       }
 
-      volume += (targetVolume - volume) * 0.18;
-
-      const amplitude = 65 + volume * 400;
-
-      // Dark translucent moving wave behind
-      drawWave(
-        time,
-        amplitude * 0.75,
-        1.5,
-        0.38,
-        "#ff7777",
-        "#a90025"
-      );
-
-      // Main glowing red wave
-      drawWave(
-        time,
-        amplitude,
-        0,
-        0.96,
-        "#ff1645",
-        "#e00027"
-      );
-
-      frame = requestAnimationFrame(animate);
+      animationRef.current = requestAnimationFrame(draw);
     }
 
-    animate();
+    draw();
 
-    return () => cancelAnimationFrame(frame);
-  }, []);
+    return () => cancelAnimationFrame(animationRef.current);
+  }, [recording]);
 
-  async function toggleMicrophone() {
-    if (listening) {
-      stopMicrophone();
+  async function toggleRecording() {
+    if (recording) {
+      streamRef.current?.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+      audioRef.current = null;
+      setRecording(false);
       return;
     }
 
@@ -131,188 +75,132 @@ export default function App() {
         audio: true
       });
 
-      streamRef.current = stream;
+      const audioContext = new (window.AudioContext ||
+        window.webkitAudioContext)();
 
-      const AudioContextClass =
-        window.AudioContext || window.webkitAudioContext;
+      const source = audioContext.createMediaStreamSource(stream);
+      const analyser = audioContext.createAnalyser();
 
-      const audio = new AudioContextClass();
-      audioRef.current = audio;
-
-      await audio.resume();
-
-      const source = audio.createMediaStreamSource(stream);
-      const analyser = audio.createAnalyser();
-
-      analyser.fftSize = 2048;
-      analyser.smoothingTimeConstant = 0.8;
-
+      analyser.fftSize = 256;
       source.connect(analyser);
-      analyserRef.current = analyser;
 
-      setListening(true);
+      streamRef.current = stream;
+      audioRef.current = analyser;
+      setRecording(true);
     } catch (error) {
-      console.error(error);
-      alert("Microphone error: " + error.message);
-      stopMicrophone();
+      alert("Please allow microphone access to start recording.");
     }
   }
-
-  function stopMicrophone() {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
-
-    if (audioRef.current) {
-      audioRef.current.close();
-      audioRef.current = null;
-    }
-
-    analyserRef.current = null;
-    setListening(false);
-  }
-
-  useEffect(() => {
-    return () => {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-      }
-
-      if (audioRef.current) {
-        audioRef.current.close();
-      }
-    };
-  }, []);
 
   return (
-    <main style={styles.page}>
+    <main style={styles.app}>
       <header style={styles.header}>
-        <div style={styles.search}>⌕ Search</div>
-        <div style={styles.menu}>☰</div>
+        <h2>Search</h2>
+        <button style={styles.menu}>☰</button>
       </header>
 
-      <section
-        style={styles.animationArea}
-        onClick={toggleMicrophone}
-        role="button"
-        tabIndex={0}
-        aria-label="Tap to start or stop listening"
-        onKeyDown={event => {
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            toggleMicrophone();
-          }
-        }}
-      >
-        <canvas
-          ref={canvasRef}
-          style={styles.canvas}
-        />
+      <section style={styles.center}>
+        <div
+          style={styles.waveContainer}
+          onClick={toggleRecording}
+        >
+          <canvas
+            ref={canvasRef}
+            width="600"
+            height="300"
+            style={styles.canvas}
+          />
 
-        <img
-          src="/findora-logo.png"
-          alt="FINDORA logo"
-          style={styles.logo}
-          draggable="false"
-        />
+          <img
+            src="/findora-logo.png"
+            alt="FINDORA logo"
+            style={styles.logo}
+          />
+        </div>
       </section>
 
-      <footer style={styles.dots}>
-        <span style={styles.activeDot}></span>
-        <span style={styles.dot}></span>
-        <span style={styles.dot}></span>
+      <footer style={styles.footer}>
+        {[0, 1, 2].map((dot) => (
+          <button
+            key={dot}
+            onClick={() => setPage(dot)}
+            style={{
+              ...styles.dot,
+              opacity: page === dot ? 1 : 0.4,
+              transform: page === dot ? "scale(1.3)" : "scale(1)"
+            }}
+          />
+        ))}
       </footer>
     </main>
   );
 }
 
 const styles = {
-  page: {
+  app: {
+    minHeight: "100dvh",
     width: "100%",
-    height: "100dvh",
-    minHeight: "100vh",
     background: "#1598F7",
+    color: "white",
     display: "flex",
     flexDirection: "column",
     overflow: "hidden",
-    fontFamily: "Arial, sans-serif"
+    fontFamily: "Arial, sans-serif",
+    boxSizing: "border-box"
   },
-
   header: {
-    height: "75px",
-    minHeight: "75px",
-    padding: "0 25px",
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    color: "white"
+    padding: "22px 25px"
   },
-
-  search: {
-    fontSize: "25px",
-    fontWeight: "bold"
-  },
-
   menu: {
-    fontSize: "34px",
-    color: "white"
+    background: "transparent",
+    color: "white",
+    border: "none",
+    fontSize: "30px",
+    cursor: "pointer"
   },
-
-  animationArea: {
+  center: {
     flex: 1,
-    width: "100%",
     display: "flex",
     justifyContent: "center",
-    alignItems: "center",
-    position: "relative",
-    cursor: "pointer",
-    touchAction: "manipulation",
-    WebkitTapHighlightColor: "transparent"
+    alignItems: "center"
   },
-
+  waveContainer: {
+    width: "100%",
+    maxWidth: "650px",
+    position: "relative",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    touchAction: "manipulation"
+  },
   canvas: {
     width: "100%",
-    maxWidth: "600px",
-    height: "auto",
-    aspectRatio: "2 / 1",
-    display: "block",
-    pointerEvents: "none"
+    height: "auto"
   },
-
   logo: {
     position: "absolute",
-    width: "23%",
-    maxWidth: "125px",
-    height: "auto",
+    width: "125px",
+    height: "125px",
     objectFit: "contain",
-    left: "50%",
-    top: "50%",
-    transform: "translate(-50%, -50%)",
     pointerEvents: "none"
   },
-
-  dots: {
-    height: "65px",
-    minHeight: "65px",
+  footer: {
     display: "flex",
     justifyContent: "center",
-    alignItems: "center",
-    gap: "17px"
+    gap: "14px",
+    padding: "30px"
   },
-
   dot: {
-    width: "12px",
-    height: "12px",
+    width: "9px",
+    height: "9px",
     borderRadius: "50%",
-    background: "rgba(255,255,255,0.35)"
-  },
-
-  activeDot: {
-    width: "13px",
-    height: "13px",
-    borderRadius: "50%",
+    border: "none",
     background: "white",
-    boxShadow: "0 0 12px white"
+    cursor: "pointer",
+    transition: "0.25s"
   }
 };
