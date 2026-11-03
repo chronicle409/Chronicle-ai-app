@@ -1,19 +1,17 @@
+import React, { useEffect, useRef, useState } from "react";
+import "./App.css";
 
-import React, { useEffect, useRef } from "react";
-
-export function RadialVisualizer({ analyser, listening }) {
+function RadialVisualizer({ analyser, listening }) {
   const canvasRef = useRef(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext("2d", { alpha: true });
-    if (!ctx) return;
-
-    let animationFrame;
-    let lastFrame = 0;
+    const ctx = canvas.getContext("2d");
+    let frame;
     let elapsed = 0;
+    let lastFrame = 0;
     let width = 0;
     let height = 0;
     let dpr = 1;
@@ -25,163 +23,186 @@ export function RadialVisualizer({ analyser, listening }) {
 
     const resize = () => {
       const rect = canvas.getBoundingClientRect();
-
       dpr = Math.min(window.devicePixelRatio || 1, 1.5);
       width = rect.width;
       height = rect.height;
-
-      canvas.width = Math.round(width * dpr);
-      canvas.height = Math.round(height * dpr);
-
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
 
     resize();
-
     const observer = new ResizeObserver(resize);
     observer.observe(canvas);
 
-    const colors = [
-      { position: 0, hue: 185 },
-      { position: 0.25, hue: 220 },
-      { position: 0.5, hue: 275 },
-      { position: 0.75, hue: 150 },
-      { position: 1, hue: 185 }
-    ];
-
-    const getHue = (position) => {
-      const p = position * (colors.length - 1);
-      const index = Math.min(Math.floor(p), colors.length - 2);
-      const mix = p - index;
-
-      return colors[index].hue +
-        (colors[index + 1].hue - colors[index].hue) * mix;
-    };
-
-    const drawArc = (cx, cy, radius, start, length, color) => {
-      ctx.beginPath();
-      ctx.arc(cx, cy, radius, start, start + length);
-
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 5;
-      ctx.lineCap = "round";
-      ctx.shadowBlur = 15;
-      ctx.shadowColor = color;
-      ctx.stroke();
-    };
-
     const draw = (timestamp) => {
-      animationFrame = requestAnimationFrame(draw);
-
+      frame = requestAnimationFrame(draw);
       if (timestamp - lastFrame < 33) return;
       lastFrame = timestamp;
-
       elapsed += 0.033;
 
       ctx.clearRect(0, 0, width, height);
 
       const cx = width / 2;
       const cy = height / 2;
-      const size = Math.min(width, height);
-      const radius = size * 0.315;
+      const radius = Math.min(width, height) * 0.315;
 
       if (analyser && data && listening) {
         analyser.getByteFrequencyData(data);
       }
 
-      // Circular radial lights.
       for (let i = 0; i < COUNT; i++) {
-        const position = i / COUNT;
-        const angle = position * Math.PI * 2 - Math.PI / 2;
-
-        const frequencyIndex = Math.floor(
-          position * (data?.length || 1)
-        );
-
+        const angle = (i / COUNT) * Math.PI * 2 - Math.PI / 2;
         const audio = listening && data
-          ? data[frequencyIndex] / 255
+          ? data[Math.floor((i / COUNT) * data.length)] / 255
           : 0;
 
-        const wave =
-          Math.sin(elapsed * 2.5 + i * 0.19) * 0.5 + 0.5;
-
-        const secondaryWave =
-          Math.sin(elapsed * 1.6 - i * 0.11) * 0.5 + 0.5;
-
+        const wave = Math.sin(elapsed * 2.5 + i * 0.19) * 0.5 + 0.5;
         const movement = listening
-          ? audio * 17 + wave * 4 + secondaryWave * 2
+          ? audio * 17 + wave * 4
           : wave * 3;
 
         const inner = radius;
         const outer = radius + 4 + movement;
 
-        const x1 = cx + Math.cos(angle) * inner;
-        const y1 = cy + Math.sin(angle) * inner;
-        const x2 = cx + Math.cos(angle) * outer;
-        const y2 = cy + Math.sin(angle) * outer;
-
-        const hue = getHue(position);
+        const hue = 185 + (i / COUNT) * 100;
         const color = `hsl(${hue}, 100%, 66%)`;
 
         ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
+        ctx.moveTo(
+          cx + Math.cos(angle) * inner,
+          cy + Math.sin(angle) * inner
+        );
+        ctx.lineTo(
+          cx + Math.cos(angle) * outer,
+          cy + Math.sin(angle) * outer
+        );
 
         ctx.strokeStyle = color;
         ctx.lineWidth = 1.8;
-        ctx.lineCap = "round";
         ctx.shadowBlur = 7;
         ctx.shadowColor = color;
         ctx.stroke();
       }
 
-      // Two continuously rotating neon arcs.
-      const arcRadius = radius - 10;
-      const rotation1 = elapsed * 0.75;
-      const rotation2 = -elapsed * 0.65 + Math.PI;
+      const drawArc = (rotation, color) => {
+        ctx.beginPath();
+        ctx.arc(
+          cx,
+          cy,
+          radius - 10,
+          rotation,
+          rotation + 0.95
+        );
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 5;
+        ctx.lineCap = "round";
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = color;
+        ctx.stroke();
+      };
 
-      drawArc(
-        cx,
-        cy,
-        arcRadius,
-        rotation1,
-        0.95,
-        "#a43dff"
-      );
-
-      drawArc(
-        cx,
-        cy,
-        arcRadius,
-        rotation2,
-        0.95,
-        "#20dfff"
-      );
-
+      drawArc(elapsed * 0.75, "#a43dff");
+      drawArc(-elapsed * 0.65 + Math.PI, "#20dfff");
       ctx.shadowBlur = 0;
     };
 
-    animationFrame = requestAnimationFrame(draw);
+    frame = requestAnimationFrame(draw);
 
     return () => {
-      cancelAnimationFrame(animationFrame);
+      cancelAnimationFrame(frame);
       observer.disconnect();
     };
   }, [analyser, listening]);
 
   return (
     <div className="findora-visualizer">
-      <canvas
-        ref={canvasRef}
-        className="findora-wave"
-      />
-
+      <canvas ref={canvasRef} className="findora-wave" />
       <div className="findora-logo-circle">
-        <img
-          src="/findora-logo.png"
-          alt="FINDORA"
-        />
+        <img src="/findora-logo.png" alt="FINDORA" />
       </div>
     </div>
+  );
+}
+
+export default function App() {
+  const [listening, setListening] = useState(false);
+  const [analyser, setAnalyser] = useState(null);
+  const audioRef = useRef(null);
+  const streamRef = useRef(null);
+
+  const toggleListening = async () => {
+    if (listening) {
+      streamRef.current?.getTracks().forEach(track => track.stop());
+      audioRef.current?.close();
+      streamRef.current = null;
+      audioRef.current = null;
+      setAnalyser(null);
+      setListening(false);
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true
+      });
+
+      const audio = new AudioContext();
+      const source = audio.createMediaStreamSource(stream);
+      const analyserNode = audio.createAnalyser();
+
+      analyserNode.fftSize = 512;
+      source.connect(analyserNode);
+
+      streamRef.current = stream;
+      audioRef.current = audio;
+      setAnalyser(analyserNode);
+      setListening(true);
+    } catch {
+      alert("Microphone access was not granted. Please check your permissions.");
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      streamRef.current?.getTracks().forEach(track => track.stop());
+      audioRef.current?.close();
+    };
+  }, []);
+
+  return (
+    <main className="findora-app">
+      <header className="findora-header">
+        <h1>FINDORA<span>.</span></h1>
+        <p>MUSIC RECOGNITION</p>
+      </header>
+
+      <section className="findora-main">
+        <p className="findora-status">
+          {listening ? "LISTENING TO AUDIO" : "READY TO DISCOVER"}
+        </p>
+
+        <RadialVisualizer
+          analyser={analyser}
+          listening={listening}
+        />
+
+        <h2>{listening ? "Listening..." : "Discover any song"}</h2>
+        <p className="findora-description">
+          {listening
+            ? "Let FINDORA hear the music around you."
+            : "Tap the button and let the music play."}
+        </p>
+
+        <button
+          className={listening ? "findora-button active" : "findora-button"}
+          onClick={toggleListening}
+        >
+          {listening ? "STOP LISTENING" : "START LISTENING"}
+        </button>
+      </section>
+
+      <footer>FINDORA AI · DISCOVER YOUR SOUND</footer>
+    </main>
   );
 }
