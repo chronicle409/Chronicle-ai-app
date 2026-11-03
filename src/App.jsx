@@ -1,5 +1,9 @@
-backgroundImage:
-  "linear-gradient(120deg, #1598F7, #00D4FF, #00E5A8, #39D353, #F5D547, #FF8A35, #FF3D81, #9B45F5, #442BFF, #1598F7)",
-
-backgroundSize: "500% 500%",
-animation: "findoraColorFlow 25s ease-in-out infinite",
+const colorAnimation = `
+@keyframes findoraColorFlow {
+  0% { background-position: 0% 50%; }
+  25% { background-position: 50% 100%; }
+  50% { background-position: 100% 50%; }
+  75% { background-position: 50% 0%; }
+  100% { background-position: 0% 50%; }
+}
+`;
