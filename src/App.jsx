@@ -3,6 +3,9 @@ import React, { useState, useRef, useEffect } from "react";
 
 export default function App() {
   const [isListening, setIsListening] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchText, setSearchText] = useState("");
   const [error, setError] = useState("");
   const streamRef = useRef(null);
 
@@ -11,21 +14,18 @@ export default function App() {
       streamRef.current?.getTracks().forEach(track => track.stop());
       streamRef.current = null;
       setIsListening(false);
-      setError("");
       return;
     }
 
     try {
       setError("");
-
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: true
       });
-
       streamRef.current = stream;
       setIsListening(true);
-    } catch (err) {
-      setError("Microphone access is needed to listen for music.");
+    } catch {
+      setError("Please allow microphone access to start listening.");
     }
   };
 
@@ -35,12 +35,12 @@ export default function App() {
     };
   }, []);
 
+  const bars = Array.from({ length: 180 }, (_, i) => i);
+
   return (
     <main className="findora-app">
       <style>{`
-        * {
-          box-sizing: border-box;
-        }
+        * { box-sizing: border-box; }
 
         body {
           margin: 0;
@@ -50,116 +50,191 @@ export default function App() {
         .findora-app {
           min-height: 100vh;
           width: 100%;
-          background: linear-gradient(
-            120deg,
-            #1598F7,
-            #00D4FF,
-            #00E5A8,
-            #39D353,
-            #F5D547,
-            #FF8A35,
-            #FF3D81,
-            #9B45F5,
-            #442BFF
-          );
-          background-size: 500% 500%;
-          animation: findoraBackground 25s ease-in-out infinite;
-          display: flex;
-          align-items: center;
-          justify-content: center;
+          position: relative;
           overflow: hidden;
           color: white;
+          background: linear-gradient(
+            120deg,
+            #078cff,
+            #00b8ff,
+            #315bff,
+            #753cff,
+            #a34cff,
+            #452dff,
+            #078cff
+          );
+          background-size: 500% 500%;
+          animation: blueFlow 22s ease-in-out infinite;
         }
 
-        @keyframes findoraBackground {
+        @keyframes blueFlow {
           0% { background-position: 0% 50%; }
+          25% { background-position: 50% 100%; }
           50% { background-position: 100% 50%; }
+          75% { background-position: 50% 0%; }
           100% { background-position: 0% 50%; }
         }
 
+        .findora-top {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          z-index: 10;
+          padding: 28px 25px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+
+        .top-button {
+          border: none;
+          background: transparent;
+          color: white;
+          font-size: 30px;
+          cursor: pointer;
+          padding: 5px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .top-button svg {
+          width: 28px;
+          height: 28px;
+          stroke: white;
+          stroke-width: 2;
+          fill: none;
+        }
+
+        .findora-search-box {
+          position: absolute;
+          top: 85px;
+          left: 20px;
+          right: 20px;
+          z-index: 12;
+        }
+
+        .findora-search-box input {
+          width: 100%;
+          padding: 14px 18px;
+          border: 1px solid rgba(255,255,255,.3);
+          border-radius: 30px;
+          background: rgba(255,255,255,.16);
+          color: white;
+          font-size: 16px;
+          outline: none;
+        }
+
+        .findora-search-box input::placeholder {
+          color: rgba(255,255,255,.8);
+        }
+
+        .findora-menu {
+          position: absolute;
+          top: 82px;
+          right: 20px;
+          z-index: 15;
+          width: 190px;
+          padding: 12px;
+          border-radius: 16px;
+          background: rgba(15,25,65,.92);
+          backdrop-filter: blur(15px);
+          box-shadow: 0 8px 30px rgba(0,0,0,.2);
+        }
+
+        .findora-menu button {
+          display: block;
+          width: 100%;
+          padding: 13px;
+          color: white;
+          background: transparent;
+          border: none;
+          text-align: left;
+          font-size: 15px;
+        }
+
         .findora-content {
+          min-height: 100vh;
           width: 100%;
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding: 20px;
+          padding: 90px 15px 75px;
         }
 
         .findora-center {
-          width: min(85vw, 360px);
+          width: min(82vw, 380px);
           aspect-ratio: 1;
           position: relative;
           display: flex;
           align-items: center;
           justify-content: center;
-          transition: transform .6s ease;
+          transition: transform .55s ease;
         }
 
         .findora-center.listening {
-          transform: translateY(-45px);
+          transform: translateY(-48px);
         }
 
         .findora-ring {
           position: absolute;
           border-radius: 50%;
-          transition: all .5s ease;
+          pointer-events: none;
         }
 
         .findora-ring.outer {
           width: 100%;
           height: 100%;
-          background: rgba(255,255,255,.07);
+          border: 2px solid rgba(255,255,255,.12);
+          background: rgba(255,255,255,.035);
         }
 
         .findora-ring.middle {
-          width: 72%;
-          height: 72%;
-          background: rgba(255,255,255,.12);
+          width: 75%;
+          height: 75%;
+          border: 2px solid rgba(255,255,255,.2);
+          background: rgba(255,255,255,.045);
         }
 
         .findora-ring.inner {
-          width: 48%;
-          height: 48%;
-          background: rgba(255,255,255,.18);
+          width: 53%;
+          height: 53%;
+          border: 2px solid rgba(255,255,255,.3);
+          background: rgba(255,255,255,.08);
         }
 
-        .listening .findora-ring {
-          animation: findoraPulse 2s ease-in-out infinite;
+        .findora-center.listening .findora-ring {
+          animation: ringPulse 2s ease-in-out infinite;
         }
 
-        .listening .findora-ring.middle {
+        .findora-center.listening .findora-ring.middle {
           animation-delay: .3s;
         }
 
-        .listening .findora-ring.inner {
+        .findora-center.listening .findora-ring.inner {
           animation-delay: .6s;
         }
 
-        @keyframes findoraPulse {
-          0%, 100% {
-            transform: scale(1);
-            opacity: .7;
-          }
-          50% {
-            transform: scale(1.08);
-            opacity: 1;
-          }
+        @keyframes ringPulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.055); }
         }
 
         .findora-logo {
           position: relative;
-          z-index: 2;
-          width: 42%;
-          height: 42%;
-          background: white;
+          z-index: 3;
+          width: 43%;
+          height: 43%;
           border: none;
           border-radius: 50%;
+          background: white;
           display: flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
-          box-shadow: 0 5px 30px rgba(0,0,0,.12);
+          box-shadow: 0 0 25px rgba(255,255,255,.2);
         }
 
         .findora-logo img {
@@ -168,11 +243,35 @@ export default function App() {
           object-fit: contain;
         }
 
+        .findora-visualizer {
+          position: absolute;
+          inset: 0;
+          z-index: 2;
+          pointer-events: none;
+        }
+
+        .findora-visualizer line {
+          stroke: rgba(255,255,255,.9);
+          stroke-width: 2;
+          stroke-linecap: round;
+          transform-box: view-box;
+          transform-origin: 190px 190px;
+        }
+
+        .findora-center.listening .findora-visualizer line {
+          animation: soundMotion .65s ease-in-out infinite alternate;
+        }
+
+        @keyframes soundMotion {
+          from { opacity: .5; stroke-width: 1.5; }
+          to { opacity: 1; stroke-width: 3.5; }
+        }
+
         .findora-listening-info {
           text-align: center;
-          margin-top: 20px;
-          padding: 0 15px;
-          animation: findoraFade .5s ease;
+          margin-top: 25px;
+          padding: 0 12px;
+          animation: fadeIn .5s ease;
         }
 
         .findora-audio-lines {
@@ -180,43 +279,47 @@ export default function App() {
           align-items: center;
           justify-content: center;
           gap: 8px;
-          height: 45px;
-          margin-bottom: 20px;
+          height: 42px;
+          margin-bottom: 18px;
         }
 
         .findora-audio-lines span {
           width: 6px;
           height: 18px;
           border-radius: 10px;
-          animation: findoraBars .7s ease-in-out infinite alternate;
+        }
+
+        .findora-center.listening ~ .findora-listening-info
+        .findora-audio-lines span {
+          animation: barMotion .65s ease-in-out infinite alternate;
         }
 
         .findora-audio-lines span:nth-child(1) {
-          background: #00E5FF;
+          background: #00d5ff;
           animation-delay: 0s;
         }
 
         .findora-audio-lines span:nth-child(2) {
-          background: #A855F7;
+          background: #6175ff;
           animation-delay: .12s;
         }
 
         .findora-audio-lines span:nth-child(3) {
-          background: #FF3D81;
+          background: #b15cff;
           animation-delay: .24s;
         }
 
         .findora-audio-lines span:nth-child(4) {
-          background: #00E5A8;
+          background: #e0a0ff;
           animation-delay: .36s;
         }
 
         .findora-audio-lines span:nth-child(5) {
-          background: #FFE14A;
+          background: #ffffff;
           animation-delay: .48s;
         }
 
-        @keyframes findoraBars {
+        @keyframes barMotion {
           from { transform: scaleY(.5); }
           to { transform: scaleY(2.5); }
         }
@@ -230,57 +333,113 @@ export default function App() {
         .findora-listening-info p {
           font-size: 15px;
           margin: 0;
-          opacity: .9;
         }
 
         .findora-error {
-          margin-top: 20px;
-          font-size: 14px;
           text-align: center;
+          font-size: 14px;
+          padding: 10px;
         }
 
         .findora-bottom {
-          margin-top: 55px;
+          position: absolute;
+          bottom: 35px;
           display: flex;
-          gap: 9px;
+          gap: 15px;
         }
 
         .findora-bottom span {
-          width: 7px;
-          height: 7px;
+          width: 15px;
+          height: 15px;
           border-radius: 50%;
-          background: rgba(255,255,255,.6);
+          background: rgba(255,255,255,.35);
         }
 
-        @keyframes findoraFade {
-          from {
-            opacity: 0;
-            transform: translateY(12px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+        .findora-bottom span:first-child {
+          background: white;
+          box-shadow: 0 0 12px white;
         }
 
-        @media (max-width: 480px) {
-          .findora-listening-info h2 {
-            font-size: 23px;
-          }
-
-          .findora-listening-info p {
-            font-size: 14px;
-          }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(12px); }
+          to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
 
-      <div className="findora-content">
+      <header className="findora-top">
+        <button
+          className="top-button"
+          onClick={() => {
+            setSearchOpen(!searchOpen);
+            setMenuOpen(false);
+          }}
+          aria-label="Search"
+        >
+          <svg viewBox="0 0 24 24">
+            <circle cx="10.8" cy="10.8" r="7.2" />
+            <path d="m16 16 5 5" />
+          </svg>
+        </button>
 
+        <button
+          className="top-button"
+          onClick={() => {
+            setMenuOpen(!menuOpen);
+            setSearchOpen(false);
+          }}
+          aria-label="Menu"
+        >
+          <svg viewBox="0 0 24 24">
+            <path d="M3 6h18M3 12h18M3 18h18" />
+          </svg>
+        </button>
+      </header>
+
+      {searchOpen && (
+        <div className="findora-search-box">
+          <input
+            placeholder="Search music..."
+            value={searchText}
+            onChange={e => setSearchText(e.target.value)}
+          />
+        </div>
+      )}
+
+      {menuOpen && (
+        <div className="findora-menu">
+          <button onClick={() => setMenuOpen(false)}>Home</button>
+          <button onClick={() => setMenuOpen(false)}>Settings</button>
+          <button onClick={() => setMenuOpen(false)}>About FINDORA</button>
+        </div>
+      )}
+
+      <div className="findora-content">
         <div className={`findora-center ${isListening ? "listening" : ""}`}>
 
           <div className="findora-ring outer" />
           <div className="findora-ring middle" />
           <div className="findora-ring inner" />
+
+          <svg
+            className="findora-visualizer"
+            viewBox="0 0 380 380"
+          >
+            {bars.map(i => {
+              const angle = (i * 360) / bars.length;
+              const delay = (i % 20) * .025;
+              return (
+                <line
+                  key={i}
+                  x1="190"
+                  y1="12"
+                  x2="190"
+                  y2="24"
+                  transform={`rotate(${angle} 190 190)`}
+                  style={{ animationDelay: `${delay}s` }}
+                />
+              );
+            })}
+          </svg>
 
           <button
             className="findora-logo"
@@ -289,37 +448,28 @@ export default function App() {
           >
             <img src="/findora-logo.png" alt="FINDORA" />
           </button>
-
         </div>
 
         {isListening && (
           <div className="findora-listening-info">
-
             <div className="findora-audio-lines">
-              {[1, 2, 3, 4, 5].map(line => (
-                <span key={line} />
+              {[1, 2, 3, 4, 5].map(n => (
+                <span key={n} />
               ))}
             </div>
 
             <h2>Listening for music</h2>
-
-            <p>
-              Make sure your device can hear the song clearly
-            </p>
-
+            <p>Make sure your device can hear the song clearly</p>
           </div>
         )}
 
-        {error && (
-          <p className="findora-error">{error}</p>
-        )}
+        {error && <p className="findora-error">{error}</p>}
 
         <div className="findora-bottom">
           <span />
           <span />
           <span />
         </div>
-
       </div>
     </main>
   );
