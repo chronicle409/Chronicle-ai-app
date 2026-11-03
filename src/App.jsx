@@ -1,31 +1,36 @@
 import React, { useEffect, useRef, useState } from "react";
 import "./App.css";
 
-function playFindoraSound() {
+async function playFindoraSound() {
+  let audio;
+
   try {
     const AudioClass =
       window.AudioContext || window.webkitAudioContext;
 
     if (!AudioClass) return;
 
-    const audio = new AudioClass();
+    audio = new AudioClass();
+
+    if (audio.state === "suspended") {
+      await audio.resume();
+    }
+
     const now = audio.currentTime;
-
-    audio.resume();
-
     const master = audio.createGain();
 
     master.gain.setValueAtTime(0.0001, now);
-    master.gain.exponentialRampToValueAtTime(0.16, now + 0.04);
-    master.gain.exponentialRampToValueAtTime(0.0001, now + 0.75);
+    master.gain.exponentialRampToValueAtTime(0.35, now + 0.05);
+    master.gain.setValueAtTime(0.35, now + 0.35);
+    master.gain.exponentialRampToValueAtTime(0.0001, now + 0.9);
 
     master.connect(audio.destination);
 
     const notes = [
-      { frequency: 523.25, start: 0, duration: 0.22 },
-      { frequency: 659.25, start: 0.09, duration: 0.24 },
-      { frequency: 783.99, start: 0.18, duration: 0.30 },
-      { frequency: 1046.50, start: 0.29, duration: 0.32 }
+      { frequency: 523.25, start: 0, duration: 0.28 },
+      { frequency: 659.25, start: 0.10, duration: 0.30 },
+      { frequency: 783.99, start: 0.20, duration: 0.35 },
+      { frequency: 1046.50, start: 0.32, duration: 0.42 }
     ];
 
     notes.forEach(note => {
@@ -40,8 +45,8 @@ function playFindoraSound() {
 
       volume.gain.setValueAtTime(0.0001, now + note.start);
       volume.gain.exponentialRampToValueAtTime(
-        0.7,
-        now + note.start + 0.025
+        0.8,
+        now + note.start + 0.03
       );
       volume.gain.exponentialRampToValueAtTime(
         0.0001,
@@ -52,15 +57,19 @@ function playFindoraSound() {
       volume.connect(master);
 
       oscillator.start(now + note.start);
-      oscillator.stop(now + note.start + note.duration + 0.02);
+      oscillator.stop(now + note.start + note.duration + 0.03);
     });
 
-    setTimeout(() => {
+    window.setTimeout(() => {
       audio.close().catch(() => {});
-    }, 1000);
+    }, 1500);
 
   } catch (error) {
     console.error("FINDORA sound error:", error);
+
+    if (audio && audio.state !== "closed") {
+      audio.close().catch(() => {});
+    }
   }
 }
 
@@ -414,7 +423,7 @@ export default function App() {
       return;
     }
 
-    // Play the FINDORA sound when listening starts.
+    // Play the FINDORA startup sound.
     playFindoraSound();
 
     try {
@@ -597,4 +606,4 @@ export default function App() {
 
     </main>
   );
-        }
+}
