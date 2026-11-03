@@ -172,6 +172,9 @@
   width: 100%;
   flex-shrink: 0;
   will-change: transform;
+
+  /* Smoothly return the circle to its original position. */
+  transition: transform 450ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* VISUALIZER */
@@ -436,6 +439,10 @@
 
 @media (prefers-reduced-motion: reduce) {
   .display-content {
+    transition: none;
+  }
+
+  .visualizer-drag-area {
     transition: none;
   }
 
