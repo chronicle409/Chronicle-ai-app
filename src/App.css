@@ -162,6 +162,18 @@
   transform: translate3d(0, -28px, 0);
 }
 
+/* DRAGGABLE VISUALIZER AREA */
+
+.visualizer-drag-area {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  flex-shrink: 0;
+  will-change: transform;
+}
+
 /* VISUALIZER */
 
 .visualizer-button {
@@ -177,10 +189,19 @@
   outline: none;
   background: transparent;
   box-shadow: none;
-  cursor: pointer;
+  cursor: grab;
   appearance: none;
   -webkit-appearance: none;
-  touch-action: manipulation;
+
+  /* Allows dragging in every direction on touchscreens. */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.visualizer-button:active {
+  cursor: grabbing;
 }
 
 .visualizer-container {
@@ -191,6 +212,7 @@
   align-items: center;
   justify-content: center;
   background: transparent;
+  pointer-events: none;
 }
 
 .visualizer-canvas {
