@@ -1,7 +1,9 @@
+
 import React, { useEffect, useRef, useState } from "react";
 import "./App.css";
 
-async function playFindoraSound() {
+// Separate, smooth sounds for starting and stopping FINDORA.
+async function playFindoraSound(type = "on") {
   let audio;
 
   try {
@@ -19,50 +21,70 @@ async function playFindoraSound() {
     const now = audio.currentTime;
     const master = audio.createGain();
 
-    master.gain.setValueAtTime(0.0001, now);
-    master.gain.exponentialRampToValueAtTime(0.35, now + 0.05);
-    master.gain.setValueAtTime(0.35, now + 0.35);
-    master.gain.exponentialRampToValueAtTime(0.0001, now + 0.9);
-
+    // Keep the combined sound comfortably below clipping level.
+    master.gain.setValueAtTime(0.65, now);
     master.connect(audio.destination);
 
-    const notes = [
-      { frequency: 523.25, start: 0, duration: 0.28 },
-      { frequency: 659.25, start: 0.10, duration: 0.30 },
-      { frequency: 783.99, start: 0.20, duration: 0.35 },
-      { frequency: 1046.50, start: 0.32, duration: 0.42 }
-    ];
+    const notes =
+      type === "on"
+        ? [
+            { frequency: 523.25, start: 0, duration: 0.34 },
+            { frequency: 659.25, start: 0.12, duration: 0.38 },
+            { frequency: 783.99, start: 0.24, duration: 0.42 },
+            { frequency: 880, start: 0.36, duration: 0.38 }
+          ]
+        : [
+            { frequency: 880, start: 0, duration: 0.30 },
+            { frequency: 783.99, start: 0.12, duration: 0.34 },
+            { frequency: 659.25, start: 0.24, duration: 0.38 },
+            { frequency: 523.25, start: 0.36, duration: 0.42 }
+          ];
+
+    let remaining = notes.length;
 
     notes.forEach(note => {
       const oscillator = audio.createOscillator();
       const volume = audio.createGain();
 
+      const startTime = now + note.start;
+      const endTime = startTime + note.duration;
+
       oscillator.type = "sine";
       oscillator.frequency.setValueAtTime(
         note.frequency,
-        now + note.start
+        startTime
       );
 
-      volume.gain.setValueAtTime(0.0001, now + note.start);
+      // Gentle attack and smooth fade-out prevent clicks.
+      volume.gain.setValueAtTime(0.0001, startTime);
       volume.gain.exponentialRampToValueAtTime(
-        0.8,
-        now + note.start + 0.03
+        0.16,
+        startTime + 0.045
+      );
+      volume.gain.setValueAtTime(
+        0.16,
+        endTime - 0.10
       );
       volume.gain.exponentialRampToValueAtTime(
         0.0001,
-        now + note.start + note.duration
+        endTime
       );
 
       oscillator.connect(volume);
       volume.connect(master);
 
-      oscillator.start(now + note.start);
-      oscillator.stop(now + note.start + note.duration + 0.03);
-    });
+      oscillator.onended = () => {
+        remaining -= 1;
 
-    window.setTimeout(() => {
-      audio.close().catch(() => {});
-    }, 1500);
+        // Close only after every note has finished.
+        if (remaining === 0 && audio.state !== "closed") {
+          audio.close().catch(() => {});
+        }
+      };
+
+      oscillator.start(startTime);
+      oscillator.stop(endTime + 0.02);
+    });
 
   } catch (error) {
     console.error("FINDORA sound error:", error);
@@ -419,12 +441,15 @@ export default function App() {
 
   async function toggleListening() {
     if (listening) {
+      // Play the OFF sound independently of the microphone audio.
+      void playFindoraSound("off");
+
       await stopListening();
       return;
     }
 
-    // Play the FINDORA startup sound.
-    playFindoraSound();
+    // Play the ON sound when the user starts listening.
+    void playFindoraSound("on");
 
     try {
       if (!navigator.mediaDevices?.getUserMedia) {
