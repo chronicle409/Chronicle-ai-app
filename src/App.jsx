@@ -1,6 +1,68 @@
-
 import React, { useEffect, useRef, useState } from "react";
 import "./App.css";
+
+function playFindoraSound() {
+  try {
+    const AudioClass =
+      window.AudioContext || window.webkitAudioContext;
+
+    if (!AudioClass) return;
+
+    const audio = new AudioClass();
+    const now = audio.currentTime;
+
+    audio.resume();
+
+    const master = audio.createGain();
+
+    master.gain.setValueAtTime(0.0001, now);
+    master.gain.exponentialRampToValueAtTime(0.16, now + 0.04);
+    master.gain.exponentialRampToValueAtTime(0.0001, now + 0.75);
+
+    master.connect(audio.destination);
+
+    const notes = [
+      { frequency: 523.25, start: 0, duration: 0.22 },
+      { frequency: 659.25, start: 0.09, duration: 0.24 },
+      { frequency: 783.99, start: 0.18, duration: 0.30 },
+      { frequency: 1046.50, start: 0.29, duration: 0.32 }
+    ];
+
+    notes.forEach(note => {
+      const oscillator = audio.createOscillator();
+      const volume = audio.createGain();
+
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(
+        note.frequency,
+        now + note.start
+      );
+
+      volume.gain.setValueAtTime(0.0001, now + note.start);
+      volume.gain.exponentialRampToValueAtTime(
+        0.7,
+        now + note.start + 0.025
+      );
+      volume.gain.exponentialRampToValueAtTime(
+        0.0001,
+        now + note.start + note.duration
+      );
+
+      oscillator.connect(volume);
+      volume.connect(master);
+
+      oscillator.start(now + note.start);
+      oscillator.stop(now + note.start + note.duration + 0.02);
+    });
+
+    setTimeout(() => {
+      audio.close().catch(() => {});
+    }, 1000);
+
+  } catch (error) {
+    console.error("FINDORA sound error:", error);
+  }
+}
 
 function Visualizer({
   analyser,
@@ -352,6 +414,9 @@ export default function App() {
       return;
     }
 
+    // Play the FINDORA sound when listening starts.
+    playFindoraSound();
+
     try {
       if (!navigator.mediaDevices?.getUserMedia) {
         alert("Microphone access is not supported on this browser.");
@@ -532,4 +597,4 @@ export default function App() {
 
     </main>
   );
-}
+        }
