@@ -1,6 +1,4 @@
 
-/* FINDORA PURE BLACK DESIGN */
-
 .findora-app {
   position: relative;
   width: 100%;
@@ -21,13 +19,11 @@
   top: 0;
   left: 0;
   width: 100%;
-  height: 64px;
+  height: 68px;
   padding: 0 18px;
-
   display: flex;
-  justify-content: space-between;
   align-items: center;
-
+  justify-content: space-between;
   background: #000000;
 }
 
@@ -35,11 +31,10 @@
   width: 46px;
   height: 46px;
   padding: 10px;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
+  flex-shrink: 0;
   border: none;
   border-radius: 50%;
   background: transparent;
@@ -57,6 +52,22 @@
   stroke-linejoin: round;
 }
 
+/* BRAND */
+
+.brand-title {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+  color: #ffffff;
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: 3px;
+  text-align: center;
+  pointer-events: none;
+}
+
 /* MENU */
 
 .menu-panel {
@@ -64,14 +75,11 @@
   z-index: 60;
   top: 70px;
   left: 18px;
-
   width: 54px;
   height: 54px;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
   border: 1px solid #292929;
   border-radius: 14px;
   background: #111111;
@@ -109,7 +117,6 @@
   right: 18px;
   height: 48px;
   padding: 0 14px;
-
   border: 1px solid #292929;
   border-radius: 12px;
   background: #111111;
@@ -131,16 +138,14 @@
   width: 100%;
   min-height: 100vh;
   min-height: 100dvh;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
-  padding: 64px 15px 0;
+  padding: 68px 15px 70px;
   background: #000000;
 }
 
-/* VISUALIZER AND LISTENING CONTENT */
+/* VISUALIZER POSITION */
 
 .display-content {
   width: 100%;
@@ -148,17 +153,13 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-
-  transform: translateY(0);
-
-  transition:
-    transform 450ms cubic-bezier(0.22, 1, 0.36, 1);
-
+  transform: translate3d(0, 0, 0);
+  transition: transform 650ms cubic-bezier(0.16, 1, 0.3, 1);
   will-change: transform;
 }
 
 .display-content.is-listening {
-  transform: translateY(-28px);
+  transform: translate3d(0, -28px, 0);
 }
 
 /* VISUALIZER */
@@ -166,73 +167,55 @@
 .visualizer-button {
   display: block;
   position: relative;
-
   width: min(88vw, 380px);
   aspect-ratio: 1 / 1;
-
   flex-shrink: 0;
-
   padding: 0;
   margin: 0;
-
   border: none;
   border-radius: 50%;
   outline: none;
-
   background: transparent;
   box-shadow: none;
-
   cursor: pointer;
   appearance: none;
   -webkit-appearance: none;
   touch-action: manipulation;
 }
 
-/* VISUALIZER CONTAINER */
-
 .visualizer-container {
   position: relative;
   width: 100%;
   height: 100%;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
   background: transparent;
 }
-
-/* CANVAS */
 
 .visualizer-canvas {
   position: absolute;
   inset: 0;
-
   display: block;
   width: 100%;
   height: 100%;
-
   background: transparent !important;
   pointer-events: none;
 }
 
-/* CENTRAL LOGO */
+/* ORIGINAL LOGO */
 
 .logo-circle {
   position: absolute;
   z-index: 2;
-
   width: 44%;
   height: 44%;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
   overflow: hidden;
   border-radius: 50%;
   background: #ffffff;
-
   pointer-events: none;
 }
 
@@ -241,7 +224,6 @@
   width: 78%;
   height: 78%;
   object-fit: contain;
-
   user-select: none;
   -webkit-user-drag: none;
 }
@@ -251,25 +233,19 @@
 .listening-information {
   width: 100%;
   max-width: 500px;
-
   display: flex;
   flex-direction: column;
   align-items: center;
-
   margin-top: 10px;
-  padding: 0 5px;
-
+  padding: 0 8px;
   text-align: center;
   color: #ffffff;
-
   animation: listening-appear 450ms ease both;
 }
 
-.listening-information h1 {
+.listening-information h2 {
   margin: 0;
-
   color: #ffffff;
-
   font-size: clamp(25px, 7vw, 36px);
   font-weight: 700;
   line-height: 1.2;
@@ -278,39 +254,30 @@
 
 .listening-information p {
   margin: 12px 0 0;
-
   color: #ffffff;
-
   font-size: clamp(15px, 4.2vw, 19px);
   font-weight: 500;
   line-height: 1.4;
 }
 
-/* SMALL WHITE AUDIO ANIMATION */
+/* SMALL AUDIO ANIMATION */
 
 .small-audio-animation {
   height: 38px;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
   gap: 8px;
   margin-top: 17px;
 }
 
 .small-audio-animation span {
   display: block;
-
   width: 6px;
   height: 9px;
-
   border-radius: 10px;
-
   background: #ffffff;
-
   transform-origin: center;
-
   animation: small-audio-wave 0.85s ease-in-out infinite;
 }
 
@@ -339,11 +306,34 @@
   animation-delay: 0.48s;
 }
 
-/* ANIMATION */
+/* BOTTOM THREE WHITE DOTS */
+
+.bottom-indicators {
+  position: absolute;
+  z-index: 50;
+  left: 50%;
+  bottom: max(22px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  padding: 12px;
+  background: transparent;
+}
+
+.indicator-dot {
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ffffff;
+}
+
+/* ANIMATIONS */
 
 @keyframes small-audio-wave {
-  0%,
-  100% {
+  0%, 100% {
     transform: scaleY(0.45);
     opacity: 0.75;
   }
@@ -366,11 +356,16 @@
   }
 }
 
-/* MOBILE RESPONSIVENESS */
+/* MOBILE */
 
 @media (max-width: 480px) {
   .topbar {
     padding: 0 12px;
+  }
+
+  .brand-title {
+    font-size: 19px;
+    letter-spacing: 2.5px;
   }
 
   .visualizer-button {
@@ -397,7 +392,7 @@
     width: min(72vw, 300px);
   }
 
-  .listening-information h1 {
+  .listening-information h2 {
     font-size: 26px;
   }
 
@@ -411,11 +406,11 @@
   }
 
   .display-content.is-listening {
-    transform: translateY(-12px);
+    transform: translate3d(0, -12px, 0);
   }
 }
 
-/* REDUCE MOTION ACCESSIBILITY */
+/* REDUCED MOTION */
 
 @media (prefers-reduced-motion: reduce) {
   .display-content {
