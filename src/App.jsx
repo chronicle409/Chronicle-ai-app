@@ -149,7 +149,7 @@ export default function App() {
   const streamRef = useRef(null);
 
   const stopListening = async () => {
-    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current?.getTracks().forEach(track => track.stop());
 
     if (audioRef.current) {
       await audioRef.current.close().catch(() => {});
@@ -170,7 +170,7 @@ export default function App() {
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
+        audio: true
       });
 
       const AudioClass =
@@ -197,7 +197,7 @@ export default function App() {
 
   useEffect(() => {
     return () => {
-      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current?.getTracks().forEach(track => track.stop());
       audioRef.current?.close();
     };
   }, []);
@@ -207,38 +207,38 @@ export default function App() {
 
       <header className="findora-topbar">
 
-        <div className="topbar-actions">
+        {/* MENU - TOP LEFT */}
 
-          <button
-            className="icon-button"
-            type="button"
-            aria-label="Menu"
-            onClick={() => {
-              setMenuOpen(!menuOpen);
-              setSearchOpen(false);
-            }}
-          >
-            <svg viewBox="0 0 24 24">
-              <path d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
+        <button
+          className="icon-button"
+          type="button"
+          aria-label="Menu"
+          onClick={() => {
+            setMenuOpen(!menuOpen);
+            setSearchOpen(false);
+          }}
+        >
+          <svg viewBox="0 0 24 24">
+            <path d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
 
-          <button
-            className="icon-button"
-            type="button"
-            aria-label="Search"
-            onClick={() => {
-              setSearchOpen(!searchOpen);
-              setMenuOpen(false);
-            }}
-          >
-            <svg viewBox="0 0 24 24">
-              <circle cx="10.8" cy="10.8" r="6.8" />
-              <path d="m16 16 5 5" />
-            </svg>
-          </button>
+        {/* SEARCH - TOP RIGHT */}
 
-        </div>
+        <button
+          className="icon-button"
+          type="button"
+          aria-label="Search"
+          onClick={() => {
+            setSearchOpen(!searchOpen);
+            setMenuOpen(false);
+          }}
+        >
+          <svg viewBox="0 0 24 24">
+            <circle cx="10.8" cy="10.8" r="6.8" />
+            <path d="m16 16 5 5" />
+          </svg>
+        </button>
 
       </header>
 
@@ -247,7 +247,7 @@ export default function App() {
           <button
             className="menu-mic-button"
             type="button"
-            aria-label={listening ? "Stop listening" : "Start listening"}
+            aria-label="Toggle microphone"
             onClick={() => {
               setMenuOpen(false);
               toggleListening();
@@ -264,12 +264,12 @@ export default function App() {
       {searchOpen && (
         <form
           className="findora-search"
-          onSubmit={(event) => event.preventDefault()}
+          onSubmit={event => event.preventDefault()}
         >
           <input
             type="search"
             value={searchText}
-            onChange={(event) => setSearchText(event.target.value)}
+            onChange={event => setSearchText(event.target.value)}
             aria-label="Search songs"
             autoFocus
           />
