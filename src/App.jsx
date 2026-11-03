@@ -13,10 +13,9 @@ export default function App() {
 
   const toggleListening = async () => {
     if (isListening) {
+      setIsListening(false);
       streamRef.current?.getTracks().forEach(track => track.stop());
       streamRef.current = null;
-      setIsListening(false);
-      setError("");
       return;
     }
 
@@ -34,35 +33,30 @@ export default function App() {
     }
   };
 
-  // Smooth, lightweight circular audio visualizer
   useEffect(() => {
-    if (!isListening || !canvasRef.current || !streamRef.current) {
-      return;
-    }
+    if (!isListening || !canvasRef.current || !streamRef.current) return;
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
 
     if (!ctx) return;
 
-    const AudioContextClass =
-      window.AudioContext || window.webkitAudioContext;
+    const AudioClass = window.AudioContext || window.webkitAudioContext;
 
-    if (!AudioContextClass) {
-      setError("Audio visualization is not supported on this browser.");
+    if (!AudioClass) {
+      setError("Audio visualization is not supported.");
       return;
     }
 
     let audioContext;
-    let animationFrame;
     let analyser;
-    let dataArray;
     let source;
+    let animationFrame;
     let stopped = false;
 
-    const startVisualizer = async () => {
+    const start = async () => {
       try {
-        audioContext = new AudioContextClass();
+        audioContext = new AudioClass();
 
         if (audioContext.state === "suspended") {
           await audioContext.resume();
@@ -75,37 +69,48 @@ export default function App() {
 
         analyser = audioContext.createAnalyser();
         analyser.fftSize = 512;
-        analyser.smoothingTimeConstant = 0.82;
+        analyser.smoothingTimeConstant = 0.85;
 
         source = audioContext.createMediaStreamSource(streamRef.current);
         source.connect(analyser);
 
-        dataArray = new Uint8Array(analyser.frequencyBinCount);
+        const frequencies = new Uint8Array(analyser.frequencyBinCount);
 
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
         canvas.width = 380 * dpr;
         canvas.height = 380 * dpr;
-
-        ctx.scale(dpr, dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
         const center = 190;
-        const bars = 120;
+        const barCount = 120;
+        const smoothed = new Array(barCount).fill(0);
 
         const draw = () => {
           if (stopped) return;
 
           animationFrame = requestAnimationFrame(draw);
 
-          analyser.getByteFrequencyData(dataArray);
+          analyser.getByteFrequencyData(frequencies);
 
           ctx.clearRect(0, 0, 380, 380);
 
-          for (let i = 0; i < bars; i++) {
-            const angle = (i / bars) * Math.PI * 2;
-            const audioValue = dataArray[i % dataArray.length] / 255;
+          for (let i = 0; i < barCount; i++) {
+            const angle = (i / barCount) * Math.PI * 2;
+
+            const audioIndex = Math.floor(
+              (i / barCount) * frequencies.length * 0.75
+            );
+
+            const audioLevel = frequencies[audioIndex] / 255;
+
+            smoothed[i] += (audioLevel - smoothed[i]) * 0.22;
+
+            const organicWave =
+              Math.sin(i * 0.13 + performance.now() * 0.0015) * 5;
 
             const innerRadius = 155;
-            const outerRadius = 165 + audioValue * 35;
+            const outerRadius =
+              165 + smoothed[i] * 48 + organicWave;
 
             const x1 = center + Math.cos(angle) * innerRadius;
             const y1 = center + Math.sin(angle) * innerRadius;
@@ -130,7 +135,7 @@ export default function App() {
       }
     };
 
-    startVisualizer();
+    start();
 
     return () => {
       stopped = true;
@@ -138,7 +143,7 @@ export default function App() {
 
       try {
         source?.disconnect();
-        analyser?.disconnect();
+
         if (audioContext && audioContext.state !== "closed") {
           audioContext.close();
         }
@@ -230,10 +235,6 @@ export default function App() {
           fill: none;
         }
 
-        .search-label {
-          font-size: 22px;
-        }
-
         /* SEARCH */
 
         .findora-search-box {
@@ -298,7 +299,7 @@ export default function App() {
           padding: 100px 15px 85px;
         }
 
-        /* CENTRAL LOGO */
+        /* SMOOTH LOGO MOVEMENT */
 
         .findora-center {
           width: min(82vw, 380px);
@@ -307,14 +308,17 @@ export default function App() {
           display: flex;
           align-items: center;
           justify-content: center;
-          transition: transform .55s ease;
+
+          transform: translate3d(0, 0, 0) scale(1);
+          transition: transform 1.2s cubic-bezier(.22, 1, .36, 1);
+          will-change: transform;
         }
 
         .findora-center.listening {
-          transform: translateY(-45px);
+          transform: translate3d(0, -95px, 0) scale(.96);
         }
 
-        /* RINGS */
+        /* CIRCULAR RINGS */
 
         .findora-ring {
           position: absolute;
@@ -325,7 +329,7 @@ export default function App() {
         .findora-ring.outer {
           width: 100%;
           height: 100%;
-          border: 2px solid rgba(255,255,255,.15);
+          border: 2px solid rgba(255,255,255,.17);
         }
 
         .findora-ring.middle {
@@ -345,25 +349,26 @@ export default function App() {
         }
 
         .findora-center.listening .findora-ring.middle {
-          animation-delay: .4s;
+          animation-delay: .3s;
         }
 
         .findora-center.listening .findora-ring.inner {
-          animation-delay: .8s;
+          animation-delay: .6s;
         }
 
         @keyframes ringPulse {
           0%, 100% {
             transform: scale(1);
-            opacity: .7;
+            opacity: .5;
           }
+
           50% {
-            transform: scale(1.035);
+            transform: scale(1.06);
             opacity: 1;
           }
         }
 
-        /* AUDIO CANVAS */
+        /* AUDIO VISUALIZER */
 
         .findora-visualizer {
           position: absolute;
@@ -374,7 +379,7 @@ export default function App() {
           pointer-events: none;
         }
 
-        /* LOGO */
+        /* LOGO BUTTON */
 
         .findora-logo {
           position: relative;
@@ -389,6 +394,7 @@ export default function App() {
           justify-content: center;
           cursor: pointer;
           box-shadow: 0 0 25px rgba(255,255,255,.2);
+          -webkit-tap-highlight-color: transparent;
         }
 
         .findora-logo img {
@@ -403,7 +409,7 @@ export default function App() {
           text-align: center;
           margin-top: 25px;
           padding: 0 12px;
-          animation: fadeIn .5s ease;
+          animation: fadeIn .7s ease both;
         }
 
         .findora-audio-lines {
@@ -494,6 +500,7 @@ export default function App() {
             opacity: 0;
             transform: translateY(12px);
           }
+
           to {
             opacity: 1;
             transform: translateY(0);
@@ -515,9 +522,8 @@ export default function App() {
             animation: none;
           }
 
-          .findora-center,
-          .findora-ring {
-            transition: none;
+          .findora-center {
+            transition-duration: .3s;
           }
         }
       `}</style>
@@ -535,11 +541,11 @@ export default function App() {
           aria-label="Search"
         >
           <svg viewBox="0 0 24 24">
-            <circle cx="10.8" cy="10.8" r="7.2"/>
-            <path d="m16 16 5 5"/>
+            <circle cx="10.8" cy="10.8" r="7.2" />
+            <path d="m16 16 5 5" />
           </svg>
 
-          <span className="search-label">Search</span>
+          <span>Search</span>
         </button>
 
         <button
@@ -551,7 +557,7 @@ export default function App() {
           aria-label="Menu"
         >
           <svg viewBox="0 0 24 24">
-            <path d="M3 6h18M3 12h18M3 18h18"/>
+            <path d="M3 6h18M3 12h18M3 18h18" />
           </svg>
         </button>
 
@@ -573,17 +579,9 @@ export default function App() {
 
       {menuOpen && (
         <div className="findora-menu">
-          <button onClick={() => setMenuOpen(false)}>
-            Home
-          </button>
-
-          <button onClick={() => setMenuOpen(false)}>
-            Settings
-          </button>
-
-          <button onClick={() => setMenuOpen(false)}>
-            About FINDORA
-          </button>
+          <button onClick={() => setMenuOpen(false)}>Home</button>
+          <button onClick={() => setMenuOpen(false)}>Settings</button>
+          <button onClick={() => setMenuOpen(false)}>About FINDORA</button>
         </div>
       )}
 
@@ -607,10 +605,7 @@ export default function App() {
             onClick={toggleListening}
             aria-label={isListening ? "Stop listening" : "Start listening"}
           >
-            <img
-              src="/findora-logo.png"
-              alt="FINDORA"
-            />
+            <img src="/findora-logo.png" alt="FINDORA" />
           </button>
 
         </div>
@@ -644,7 +639,6 @@ export default function App() {
         </div>
 
       </div>
-
     </main>
   );
 }
