@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import "./App.css";
 
-function RadialVisualizer({ analyser, listening, onToggle }) {
+function Visualizer({ analyser, listening, onToggle }) {
   const canvasRef = useRef(null);
 
   useEffect(() => {
@@ -10,7 +10,7 @@ function RadialVisualizer({ analyser, listening, onToggle }) {
     if (!canvas) return;
 
     const ctx = canvas.getContext("2d");
-    let frame;
+    let animation;
     let elapsed = 0;
     let lastFrame = 0;
     let width = 0;
@@ -18,33 +18,30 @@ function RadialVisualizer({ analyser, listening, onToggle }) {
     let dpr = 1;
 
     const COUNT = 180;
-    const data = analyser
+    const audioData = analyser
       ? new Uint8Array(analyser.frequencyBinCount)
       : null;
 
-    const resize = () => {
+    function resize() {
       const rect = canvas.getBoundingClientRect();
-
-      dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
       width = rect.width;
       height = rect.height;
 
       canvas.width = Math.round(width * dpr);
       canvas.height = Math.round(height * dpr);
-
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    };
+    }
 
     resize();
 
     const observer = new ResizeObserver(resize);
     observer.observe(canvas);
 
-    const draw = (timestamp) => {
-      frame = requestAnimationFrame(draw);
+    function draw(timestamp) {
+      animation = requestAnimationFrame(draw);
 
       if (timestamp - lastFrame < 33) return;
-
       lastFrame = timestamp;
       elapsed += 0.033;
 
@@ -52,37 +49,35 @@ function RadialVisualizer({ analyser, listening, onToggle }) {
 
       const cx = width / 2;
       const cy = height / 2;
-      const radius = Math.min(width, height) * 0.315;
+      const radius = Math.min(width, height) * 0.36;
 
-      if (analyser && data && listening) {
-        analyser.getByteFrequencyData(data);
+      if (analyser && audioData && listening) {
+        analyser.getByteFrequencyData(audioData);
       }
 
       for (let i = 0; i < COUNT; i++) {
         const angle = (i / COUNT) * Math.PI * 2 - Math.PI / 2;
 
         const audio =
-          listening && data
-            ? data[Math.floor((i / COUNT) * data.length)] / 255
+          listening && audioData
+            ? audioData[Math.floor((i / COUNT) * audioData.length)] / 255
             : 0;
 
         const wave =
           Math.sin(elapsed * 2.5 + i * 0.19) * 0.5 + 0.5;
 
         const movement = listening
-          ? audio * 17 + wave * 4
+          ? audio * 16 + wave * 4
           : wave * 3;
 
         const hue = 185 + (i / COUNT) * 100;
         const color = `hsl(${hue}, 100%, 66%)`;
 
         ctx.beginPath();
-
         ctx.moveTo(
           cx + Math.cos(angle) * radius,
           cy + Math.sin(angle) * radius
         );
-
         ctx.lineTo(
           cx + Math.cos(angle) * (radius + 4 + movement),
           cy + Math.sin(angle) * (radius + 4 + movement)
@@ -90,47 +85,53 @@ function RadialVisualizer({ analyser, listening, onToggle }) {
 
         ctx.strokeStyle = color;
         ctx.lineWidth = 1.8;
-        ctx.shadowBlur = 7;
+        ctx.shadowBlur = 8;
         ctx.shadowColor = color;
         ctx.stroke();
       }
 
-      const drawArc = (rotation, color) => {
+      function arc(rotation, color) {
         ctx.beginPath();
-        ctx.arc(cx, cy, radius - 10, rotation, rotation + 0.95);
+        ctx.arc(
+          cx,
+          cy,
+          radius - 10,
+          rotation,
+          rotation + 0.95
+        );
         ctx.strokeStyle = color;
         ctx.lineWidth = 5;
         ctx.lineCap = "round";
         ctx.shadowBlur = 15;
         ctx.shadowColor = color;
         ctx.stroke();
-      };
+      }
 
-      drawArc(elapsed * 0.75, "#a43dff");
-      drawArc(-elapsed * 0.65 + Math.PI, "#20dfff");
+      arc(elapsed * 0.75, "#a43dff");
+      arc(-elapsed * 0.65 + Math.PI, "#20dfff");
 
       ctx.shadowBlur = 0;
-    };
+    }
 
-    frame = requestAnimationFrame(draw);
+    animation = requestAnimationFrame(draw);
 
     return () => {
-      cancelAnimationFrame(frame);
+      cancelAnimationFrame(animation);
       observer.disconnect();
     };
   }, [analyser, listening]);
 
   return (
     <button
-      className="visualizer-trigger"
-      onClick={onToggle}
       type="button"
+      className="visualizer-button"
+      onClick={onToggle}
       aria-label={listening ? "Stop listening" : "Start listening"}
     >
-      <div className="findora-visualizer">
-        <canvas ref={canvasRef} className="findora-wave" />
+      <div className="visualizer-container">
+        <canvas ref={canvasRef} className="visualizer-canvas" />
 
-        <div className="findora-logo-circle">
+        <div className="logo-circle">
           <img src="/findora-logo.png" alt="FINDORA" />
         </div>
       </div>
@@ -148,23 +149,18 @@ export default function App() {
   const audioRef = useRef(null);
   const streamRef = useRef(null);
 
-  const stopListening = async () => {
-    streamRef.current?.getTracks().forEach(track => track.stop());
-
-    if (audioRef.current) {
-      await audioRef.current.close().catch(() => {});
-    }
-
-    streamRef.current = null;
-    audioRef.current = null;
-
-    setAnalyser(null);
-    setListening(false);
-  };
-
-  const toggleListening = async () => {
+  async function toggleListening() {
     if (listening) {
-      await stopListening();
+      streamRef.current?.getTracks().forEach(track => track.stop());
+
+      if (audioRef.current) {
+        await audioRef.current.close().catch(() => {});
+      }
+
+      streamRef.current = null;
+      audioRef.current = null;
+      setAnalyser(null);
+      setListening(false);
       return;
     }
 
@@ -191,9 +187,9 @@ export default function App() {
       setAnalyser(analyserNode);
       setListening(true);
     } catch (error) {
-      alert("Please allow microphone access to use FINDORA.");
+      alert("Please allow microphone access for FINDORA.");
     }
-  };
+  }
 
   useEffect(() => {
     return () => {
@@ -205,14 +201,12 @@ export default function App() {
   return (
     <main className="findora-app">
 
-      <header className="findora-topbar">
-
-        {/* MENU - TOP LEFT */}
+      <header className="topbar">
 
         <button
-          className="icon-button"
-          type="button"
+          className="top-icon"
           aria-label="Menu"
+          type="button"
           onClick={() => {
             setMenuOpen(!menuOpen);
             setSearchOpen(false);
@@ -223,12 +217,10 @@ export default function App() {
           </svg>
         </button>
 
-        {/* SEARCH - TOP RIGHT */}
-
         <button
-          className="icon-button"
-          type="button"
+          className="top-icon"
           aria-label="Search"
+          type="button"
           onClick={() => {
             setSearchOpen(!searchOpen);
             setMenuOpen(false);
@@ -243,9 +235,9 @@ export default function App() {
       </header>
 
       {menuOpen && (
-        <div className="findora-menu">
+        <div className="menu-panel">
           <button
-            className="menu-mic-button"
+            className="menu-mic"
             type="button"
             aria-label="Toggle microphone"
             onClick={() => {
@@ -263,21 +255,21 @@ export default function App() {
 
       {searchOpen && (
         <form
-          className="findora-search"
+          className="search-panel"
           onSubmit={event => event.preventDefault()}
         >
           <input
             type="search"
             value={searchText}
             onChange={event => setSearchText(event.target.value)}
-            aria-label="Search songs"
+            aria-label="Search"
             autoFocus
           />
         </form>
       )}
 
-      <section className="findora-main">
-        <RadialVisualizer
+      <section className="main-display">
+        <Visualizer
           analyser={analyser}
           listening={listening}
           onToggle={toggleListening}
