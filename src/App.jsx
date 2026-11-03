@@ -20,32 +20,32 @@ function Visualizer({ analyser, listening, onToggle }) {
     let dpr = 1;
 
     const COUNT = 180;
+    const QUADRANTS = 4;
 
     const audioData = analyser
       ? new Uint8Array(analyser.frequencyBinCount)
       : null;
 
-    // Prepare bar positions and colours only once.
-    const bars = Array.from({ length: COUNT }, (_, i) => ({
-      angle: (i / COUNT) * Math.PI * 2 - Math.PI / 2,
-      hue: (345 + (i / COUNT) * 45) % 360,
-    }));
+    const bars = Array.from({ length: COUNT }, (_, i) => {
+      const angle = (i / COUNT) * Math.PI * 2 - Math.PI / 2;
+      const quadrant = Math.floor(i / (COUNT / QUADRANTS));
+      const localPosition =
+        (i % (COUNT / QUADRANTS)) / (COUNT / QUADRANTS);
+
+      return {
+        angle,
+        quadrant,
+        localPosition,
+        hue: (345 + (i / COUNT) * 45) % 360,
+        phase: i * 0.19
+      };
+    });
 
     function resize() {
       const rect = canvas.getBoundingClientRect();
 
-      const newWidth = rect.width;
-      const newHeight = rect.height;
-
-      if (
-        width === newWidth &&
-        height === newHeight
-      ) {
-        return;
-      }
-
-      width = newWidth;
-      height = newHeight;
+      width = rect.width;
+      height = rect.height;
 
       dpr = Math.min(window.devicePixelRatio || 1, 1.5);
 
@@ -78,19 +78,14 @@ function Visualizer({ analyser, listening, onToggle }) {
       ctx.strokeStyle = color;
       ctx.lineWidth = 5;
       ctx.lineCap = "round";
-
-      // Glow is reserved for the three arcs,
-      // rather than all 180 bars.
       ctx.shadowBlur = 13;
       ctx.shadowColor = color;
-
       ctx.stroke();
     }
 
     function draw(timestamp) {
       animation = requestAnimationFrame(draw);
 
-      // Limit unnecessary rendering work.
       if (timestamp - lastFrame < 16) return;
 
       const delta = lastFrame
@@ -106,37 +101,55 @@ function Visualizer({ analyser, listening, onToggle }) {
 
       const cx = width / 2;
       const cy = height / 2;
-
       const radius = Math.min(width, height) * 0.32;
 
       if (analyser && audioData && listening) {
         analyser.getByteFrequencyData(audioData);
       }
 
-      // Reset expensive shadow effects before drawing bars.
       ctx.shadowBlur = 0;
 
-      // Draw the 180 red radial bars.
+      // Distribute audio frequencies around all four
+      // sections of the circle.
       for (let i = 0; i < COUNT; i++) {
         const bar = bars[i];
 
-        const audio = listening && audioData
-          ? audioData[
-              Math.floor(
-                (i / COUNT) * audioData.length
-              )
-            ] / 255
+        const frequencyPosition = Math.pow(
+          bar.localPosition,
+          1.5
+        );
+
+        const frequencyIndex = Math.min(
+          audioData ? audioData.length - 1 : 0,
+          1 + Math.floor(frequencyPosition * 115)
+        );
+
+        const quadrantOffset = bar.quadrant * 9;
+
+        const mappedIndex = audioData
+          ? Math.min(
+              audioData.length - 1,
+              frequencyIndex + quadrantOffset
+            )
           : 0;
 
+        const audio = listening && audioData
+          ? audioData[mappedIndex] / 255
+          : 0;
+
+        // Different motion on every section.
         const wave =
-          Math.sin(elapsed * 2.5 + i * 0.19) * 0.5 + 0.5;
+          Math.sin(
+            elapsed * (2.2 + bar.quadrant * 0.25) +
+            bar.phase
+          ) * 0.5 + 0.5;
+
+        const secondaryWave =
+          Math.sin(elapsed * 3.1 + bar.phase * 1.7) * 0.5 + 0.5;
 
         const movement = listening
-          ? audio * 35 + wave * 8
-          : wave * 7;
-
-        const startRadius = radius;
-        const endRadius = radius + 8 + movement;
+          ? audio * 42 + wave * 7 + secondaryWave * 4
+          : wave * 7 + secondaryWave * 3;
 
         const cos = Math.cos(bar.angle);
         const sin = Math.sin(bar.angle);
@@ -144,46 +157,25 @@ function Visualizer({ analyser, listening, onToggle }) {
         ctx.beginPath();
 
         ctx.moveTo(
-          cx + cos * startRadius,
-          cy + sin * startRadius
+          cx + cos * radius,
+          cy + sin * radius
         );
 
         ctx.lineTo(
-          cx + cos * endRadius,
-          cy + sin * endRadius
+          cx + cos * (radius + 8 + movement),
+          cy + sin * (radius + 8 + movement)
         );
 
         ctx.strokeStyle = `hsl(${bar.hue}, 100%, 62%)`;
         ctx.lineWidth = 2;
         ctx.lineCap = "round";
-
         ctx.stroke();
       }
 
-      // Draw three smoothly rotating red arcs.
-      drawArc(
-        cx,
-        cy,
-        radius - 13,
-        elapsed * 0.65,
-        "#ff1744"
-      );
-
-      drawArc(
-        cx,
-        cy,
-        radius - 13,
-        -elapsed * 0.55 + Math.PI,
-        "#ff4d6d"
-      );
-
-      drawArc(
-        cx,
-        cy,
-        radius - 13,
-        elapsed * 0.35 + Math.PI,
-        "#d50000"
-      );
+      // Three rotating red arcs.
+      drawArc(cx, cy, radius - 13, elapsed * 0.65, "#ff1744");
+      drawArc(cx, cy, radius - 13, -elapsed * 0.55 + Math.PI, "#ff4d6d");
+      drawArc(cx, cy, radius - 13, elapsed * 0.35 + Math.PI, "#d50000");
 
       ctx.shadowBlur = 0;
     }
@@ -224,7 +216,6 @@ function Visualizer({ analyser, listening, onToggle }) {
 export default function App() {
   const [listening, setListening] = useState(false);
   const [analyser, setAnalyser] = useState(null);
-
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchText, setSearchText] = useState("");
@@ -233,9 +224,7 @@ export default function App() {
   const streamRef = useRef(null);
 
   async function stopListening() {
-    streamRef.current?.getTracks().forEach(track => {
-      track.stop();
-    });
+    streamRef.current?.getTracks().forEach(track => track.stop());
 
     if (audioRef.current) {
       await audioRef.current.close().catch(() => {});
@@ -269,13 +258,11 @@ export default function App() {
 
       if (!AudioClass) {
         stream.getTracks().forEach(track => track.stop());
-
         alert("Audio is not supported on this browser.");
         return;
       }
 
       const audio = new AudioClass();
-
       await audio.resume();
 
       const source = audio.createMediaStreamSource(stream);
@@ -294,17 +281,13 @@ export default function App() {
 
     } catch (error) {
       console.error("FINDORA microphone error:", error);
-
       alert("Please allow microphone access for FINDORA.");
     }
   }
 
   useEffect(() => {
     return () => {
-      streamRef.current?.getTracks().forEach(track => {
-        track.stop();
-      });
-
+      streamRef.current?.getTracks().forEach(track => track.stop());
       audioRef.current?.close();
     };
   }, []);
@@ -327,6 +310,8 @@ export default function App() {
             <path d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
+
+        <h1 className="brand-title">FINDORA</h1>
 
         <button
           className="top-icon"
@@ -395,8 +380,7 @@ export default function App() {
 
           {listening && (
             <div className="listening-information">
-
-              <h1>Listening for music</h1>
+              <h2>Listening for music</h2>
 
               <p>
                 Make sure your device can hear the song clearly
@@ -412,13 +396,18 @@ export default function App() {
                 <span />
                 <span />
               </div>
-
             </div>
           )}
 
         </div>
 
       </section>
+
+      <div className="bottom-indicators" aria-label="Page indicators">
+        <span className="indicator-dot" />
+        <span className="indicator-dot" />
+        <span className="indicator-dot" />
+      </div>
 
     </main>
   );
