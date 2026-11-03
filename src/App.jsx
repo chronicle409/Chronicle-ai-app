@@ -316,6 +316,11 @@ export default function App() {
 
     if (drag.moved) {
       draggedRef.current = true;
+
+      setDragPosition({
+        x: 0,
+        y: 0
+      });
     }
 
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
