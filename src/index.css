@@ -1,6 +1,4 @@
 
-/* GLOBAL FINDORA SETTINGS */
-
 * {
   box-sizing: border-box;
 }
@@ -13,7 +11,7 @@ body,
   min-height: 100%;
   margin: 0;
   padding: 0;
-  background-color: #212121 !important;
+  background: #000000 !important;
 }
 
 html {
@@ -24,9 +22,10 @@ body {
   min-height: 100vh;
   min-height: 100dvh;
   overflow-x: hidden;
+
   font-family: Arial, Helvetica, sans-serif;
   color: #ffffff;
-  background: #212121 !important;
+  background: #000000 !important;
 }
 
 #root {
