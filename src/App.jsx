@@ -6,6 +6,10 @@ function Visualizer({
   analyser,
   listening,
   onToggle,
+  onPointerDown,
+  onPointerMove,
+  onPointerUp,
+  onPointerCancel,
   draggedRef
 }) {
   const canvasRef = useRef(null);
@@ -185,18 +189,24 @@ function Visualizer({
     };
   }, [analyser, listening]);
 
+  function handleClick() {
+    if (draggedRef.current) {
+      draggedRef.current = false;
+      return;
+    }
+
+    onToggle();
+  }
+
   return (
     <button
       type="button"
       className="visualizer-button"
-      onClick={() => {
-        if (draggedRef.current) {
-          draggedRef.current = false;
-          return;
-        }
-
-        onToggle();
-      }}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerCancel}
+      onClick={handleClick}
       aria-label={listening ? "Stop listening" : "Start listening"}
       aria-pressed={listening}
     >
@@ -225,7 +235,6 @@ export default function App() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchText, setSearchText] = useState("");
 
-  // Position of the draggable visualizer.
   const [dragPosition, setDragPosition] = useState({
     x: 0,
     y: 0
@@ -247,9 +256,15 @@ export default function App() {
   const streamRef = useRef(null);
 
   function handlePointerDown(event) {
-    if (!event.isPrimary || event.button !== 0) return;
+    if (!event.isPrimary) return;
+
+    if (event.pointerType === "mouse" && event.button !== 0) {
+      return;
+    }
 
     event.preventDefault();
+
+    draggedRef.current = false;
 
     dragRef.current = {
       active: true,
@@ -297,7 +312,7 @@ export default function App() {
       return;
     }
 
-    dragRef.current.active = false;
+    drag.active = false;
 
     if (drag.moved) {
       draggedRef.current = true;
@@ -306,6 +321,10 @@ export default function App() {
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
+  }
+
+  function handlePointerCancel(event) {
+    handlePointerUp(event);
   }
 
   async function stopListening() {
@@ -462,15 +481,15 @@ export default function App() {
             style={{
               transform: `translate3d(${dragPosition.x}px, ${dragPosition.y}px, 0)`
             }}
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            onPointerCancel={handlePointerUp}
           >
             <Visualizer
               analyser={analyser}
               listening={listening}
               onToggle={toggleListening}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerCancel={handlePointerCancel}
               draggedRef={draggedRef}
             />
           </div>
