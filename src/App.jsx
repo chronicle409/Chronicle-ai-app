@@ -2,7 +2,12 @@
 import React, { useEffect, useRef, useState } from "react";
 import "./App.css";
 
-function Visualizer({ analyser, listening, onToggle }) {
+function Visualizer({
+  analyser,
+  listening,
+  onToggle,
+  draggedRef
+}) {
   const canvasRef = useRef(null);
 
   useEffect(() => {
@@ -20,7 +25,6 @@ function Visualizer({ analyser, listening, onToggle }) {
     let dpr = 1;
 
     const COUNT = 180;
-    const QUADRANTS = 4;
 
     const audioData = analyser
       ? new Uint8Array(analyser.frequencyBinCount)
@@ -28,9 +32,8 @@ function Visualizer({ analyser, listening, onToggle }) {
 
     const bars = Array.from({ length: COUNT }, (_, i) => {
       const angle = (i / COUNT) * Math.PI * 2 - Math.PI / 2;
-      const quadrant = Math.floor(i / (COUNT / QUADRANTS));
-      const localPosition =
-        (i % (COUNT / QUADRANTS)) / (COUNT / QUADRANTS);
+      const quadrant = Math.floor(i / 45);
+      const localPosition = (i % 45) / 45;
 
       return {
         angle,
@@ -109,8 +112,6 @@ function Visualizer({ analyser, listening, onToggle }) {
 
       ctx.shadowBlur = 0;
 
-      // Distribute audio frequencies around all four
-      // sections of the circle.
       for (let i = 0; i < COUNT; i++) {
         const bar = bars[i];
 
@@ -124,12 +125,10 @@ function Visualizer({ analyser, listening, onToggle }) {
           1 + Math.floor(frequencyPosition * 115)
         );
 
-        const quadrantOffset = bar.quadrant * 9;
-
         const mappedIndex = audioData
           ? Math.min(
               audioData.length - 1,
-              frequencyIndex + quadrantOffset
+              frequencyIndex + bar.quadrant * 9
             )
           : 0;
 
@@ -137,7 +136,6 @@ function Visualizer({ analyser, listening, onToggle }) {
           ? audioData[mappedIndex] / 255
           : 0;
 
-        // Different motion on every section.
         const wave =
           Math.sin(
             elapsed * (2.2 + bar.quadrant * 0.25) +
@@ -172,7 +170,6 @@ function Visualizer({ analyser, listening, onToggle }) {
         ctx.stroke();
       }
 
-      // Three rotating red arcs.
       drawArc(cx, cy, radius - 13, elapsed * 0.65, "#ff1744");
       drawArc(cx, cy, radius - 13, -elapsed * 0.55 + Math.PI, "#ff4d6d");
       drawArc(cx, cy, radius - 13, elapsed * 0.35 + Math.PI, "#d50000");
@@ -192,7 +189,14 @@ function Visualizer({ analyser, listening, onToggle }) {
     <button
       type="button"
       className="visualizer-button"
-      onClick={onToggle}
+      onClick={() => {
+        if (draggedRef.current) {
+          draggedRef.current = false;
+          return;
+        }
+
+        onToggle();
+      }}
       aria-label={listening ? "Stop listening" : "Start listening"}
       aria-pressed={listening}
     >
@@ -206,6 +210,7 @@ function Visualizer({ analyser, listening, onToggle }) {
           <img
             src="/findora-logo.png"
             alt="FINDORA"
+            draggable="false"
           />
         </div>
       </div>
@@ -220,8 +225,88 @@ export default function App() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchText, setSearchText] = useState("");
 
+  // Position of the draggable visualizer.
+  const [dragPosition, setDragPosition] = useState({
+    x: 0,
+    y: 0
+  });
+
+  const dragRef = useRef({
+    active: false,
+    moved: false,
+    startX: 0,
+    startY: 0,
+    originalX: 0,
+    originalY: 0,
+    pointerId: null
+  });
+
+  const draggedRef = useRef(false);
+
   const audioRef = useRef(null);
   const streamRef = useRef(null);
+
+  function handlePointerDown(event) {
+    if (!event.isPrimary || event.button !== 0) return;
+
+    event.preventDefault();
+
+    dragRef.current = {
+      active: true,
+      moved: false,
+      startX: event.clientX,
+      startY: event.clientY,
+      originalX: dragPosition.x,
+      originalY: dragPosition.y,
+      pointerId: event.pointerId
+    };
+
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function handlePointerMove(event) {
+    const drag = dragRef.current;
+
+    if (!drag.active || drag.pointerId !== event.pointerId) {
+      return;
+    }
+
+    const deltaX = event.clientX - drag.startX;
+    const deltaY = event.clientY - drag.startY;
+
+    if (Math.abs(deltaX) > 4 || Math.abs(deltaY) > 4) {
+      drag.moved = true;
+    }
+
+    if (drag.moved) {
+      event.preventDefault();
+
+      draggedRef.current = true;
+
+      setDragPosition({
+        x: drag.originalX + deltaX,
+        y: drag.originalY + deltaY
+      });
+    }
+  }
+
+  function handlePointerUp(event) {
+    const drag = dragRef.current;
+
+    if (!drag.active || drag.pointerId !== event.pointerId) {
+      return;
+    }
+
+    dragRef.current.active = false;
+
+    if (drag.moved) {
+      draggedRef.current = true;
+    }
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  }
 
   async function stopListening() {
     streamRef.current?.getTracks().forEach(track => track.stop());
@@ -372,11 +457,23 @@ export default function App() {
           }`}
         >
 
-          <Visualizer
-            analyser={analyser}
-            listening={listening}
-            onToggle={toggleListening}
-          />
+          <div
+            className="visualizer-drag-area"
+            style={{
+              transform: `translate3d(${dragPosition.x}px, ${dragPosition.y}px, 0)`
+            }}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+          >
+            <Visualizer
+              analyser={analyser}
+              listening={listening}
+              onToggle={toggleListening}
+              draggedRef={draggedRef}
+            />
+          </div>
 
           {listening && (
             <div className="listening-information">
