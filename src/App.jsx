@@ -38,13 +38,11 @@ export default function App() {
 
     function draw() {
       time += 0.018;
-
       ctx.clearRect(0, 0, width, height);
 
       const cx = width / 2;
       const cy = height * 0.43;
       const radius = Math.min(width, height) * 0.205;
-
       const bars = 144;
 
       const analyser = analyserRef.current;
@@ -54,7 +52,6 @@ export default function App() {
         analyser.getByteFrequencyData(data);
       }
 
-      // Outer radial waveform
       for (let i = 0; i < bars; i++) {
         const angle = (i / bars) * Math.PI * 2;
 
@@ -95,7 +92,7 @@ export default function App() {
         ctx.stroke();
       }
 
-      // Inner circular rings
+      // Circular rings
       ctx.beginPath();
       ctx.arc(cx, cy, radius * 0.99, 0, Math.PI * 2);
       ctx.strokeStyle = "rgba(255,255,255,0.65)";
@@ -122,11 +119,10 @@ export default function App() {
     };
   }, []);
 
-  // Microphone on/off
+  // Microphone start and stop
   async function toggleRecording() {
     if (recording) {
-      streamRef.current?.getTracks().forEach((track) => track.stop());
-
+      streamRef.current?.getTracks().forEach(track => track.stop());
       streamRef.current = null;
 
       if (audioContextRef.current) {
@@ -143,7 +139,7 @@ export default function App() {
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
+        audio: true
       });
 
       const AudioClass =
@@ -175,17 +171,44 @@ export default function App() {
   // Clean up microphone
   useEffect(() => {
     return () => {
-      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current?.getTracks().forEach(track => track.stop());
       audioContextRef.current?.close();
     };
   }, []);
 
   return (
     <main style={styles.app}>
+
+      {/* Smooth background colour animation */}
+      <style>{`
+        @keyframes findoraColorFlow {
+          0% {
+            background-position: 0% 50%;
+          }
+          25% {
+            background-position: 50% 100%;
+          }
+          50% {
+            background-position: 100% 50%;
+          }
+          75% {
+            background-position: 50% 0%;
+          }
+          100% {
+            background-position: 0% 50%;
+          }
+        }
+
+        * {
+          box-sizing: border-box;
+        }
+      `}</style>
+
       <canvas ref={canvasRef} style={styles.canvas} />
 
       {/* Top buttons */}
       <header style={styles.header}>
+
         {/* Search icon only */}
         <button
           type="button"
@@ -206,7 +229,7 @@ export default function App() {
           </svg>
         </button>
 
-        {/* Three-line menu */}
+        {/* Menu button */}
         <button
           type="button"
           aria-label="Menu"
@@ -217,6 +240,7 @@ export default function App() {
           <span style={styles.menuLine} />
           <span style={styles.menuLine} />
         </button>
+
       </header>
 
       {/* Menu panel */}
@@ -228,7 +252,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Centre white circle and fitted logo */}
+      {/* Centre logo */}
       <button
         type="button"
         onClick={toggleRecording}
@@ -242,31 +266,40 @@ export default function App() {
         />
       </button>
 
-      {/* Three navigation dots */}
+      {/* Bottom navigation dots */}
       <footer style={styles.footer}>
         <span style={styles.activeDot} />
         <span style={styles.dot} />
         <span style={styles.dot} />
       </footer>
+
     </main>
   );
 }
 
 const styles = {
+
+  // Animated background
   app: {
     position: "relative",
     width: "100%",
     height: "100dvh",
     minHeight: "500px",
     overflow: "hidden",
-    background: "#1598F7",
-    fontFamily: "Arial, sans-serif",
+
+    backgroundImage:
+      "linear-gradient(120deg, #1598F7, #08C5E8, #6658F5, #1598F7)",
+
+    backgroundSize: "300% 300%",
+    animation: "findoraColorFlow 18s ease-in-out infinite",
+
+    fontFamily: "Arial, sans-serif"
   },
 
   canvas: {
     position: "absolute",
     inset: 0,
-    pointerEvents: "none",
+    pointerEvents: "none"
   },
 
   // Header
@@ -279,10 +312,10 @@ const styles = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    zIndex: 5,
+    zIndex: 5
   },
 
-  // No circles around buttons
+  // Search and menu without circles
   topButton: {
     width: "44px",
     height: "44px",
@@ -295,7 +328,7 @@ const styles = {
     justifyContent: "center",
     gap: "5px",
     padding: 0,
-    cursor: "pointer",
+    cursor: "pointer"
   },
 
   menuLine: {
@@ -303,7 +336,7 @@ const styles = {
     width: "25px",
     height: "2.5px",
     borderRadius: "3px",
-    background: "white",
+    background: "white"
   },
 
   // Menu
@@ -316,11 +349,11 @@ const styles = {
     display: "grid",
     gap: "18px",
     color: "white",
-    background: "#087DD0",
-    borderRadius: "12px",
+    background: "rgba(0,80,160,0.85)",
+    borderRadius: "12px"
   },
 
-  // Centre circle
+  // Centre white circle
   centerButton: {
     position: "absolute",
     left: "50%",
@@ -338,15 +371,15 @@ const styles = {
     overflow: "hidden",
     zIndex: 3,
     cursor: "pointer",
-    boxShadow: "0 0 18px rgba(255,255,255,0.3)",
+    boxShadow: "0 0 18px rgba(255,255,255,0.3)"
   },
 
-  // Correct logo size
+  // Fitted heartbeat logo
   logo: {
     width: "65%",
     height: "65%",
     objectFit: "contain",
-    transform: "none",
+    transform: "none"
   },
 
   // Bottom navigation
@@ -359,7 +392,7 @@ const styles = {
     justifyContent: "center",
     alignItems: "center",
     gap: "13px",
-    zIndex: 5,
+    zIndex: 5
   },
 
   activeDot: {
@@ -367,13 +400,14 @@ const styles = {
     height: "10px",
     borderRadius: "50%",
     background: "white",
-    boxShadow: "0 0 10px white",
+    boxShadow: "0 0 10px white"
   },
 
   dot: {
     width: "10px",
     height: "10px",
     borderRadius: "50%",
-    background: "rgba(255,255,255,0.4)",
-  },
+    background: "rgba(255,255,255,0.4)"
+  }
+
 };
