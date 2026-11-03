@@ -7,13 +7,15 @@ export default function App() {
   const dataRef = useRef(null);
   const streamRef = useRef(null);
   const audioContextRef = useRef(null);
+
   const [recording, setRecording] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // Lightweight circular visualizer
+  // Circular audio visualizer
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
+
     let animation;
     let width = 0;
     let height = 0;
@@ -21,11 +23,13 @@ export default function App() {
 
     function resize() {
       const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+
       width = window.innerWidth;
       height = window.innerHeight;
 
       canvas.width = width * dpr;
       canvas.height = height * dpr;
+
       canvas.style.width = width + "px";
       canvas.style.height = height + "px";
 
@@ -34,11 +38,13 @@ export default function App() {
 
     function draw() {
       time += 0.018;
+
       ctx.clearRect(0, 0, width, height);
 
       const cx = width / 2;
       const cy = height * 0.43;
       const radius = Math.min(width, height) * 0.205;
+
       const bars = 144;
 
       const analyser = analyserRef.current;
@@ -48,7 +54,7 @@ export default function App() {
         analyser.getByteFrequencyData(data);
       }
 
-      // Outer circular waveform
+      // Outer radial waveform
       for (let i = 0; i < bars; i++) {
         const angle = (i / bars) * Math.PI * 2;
 
@@ -58,23 +64,26 @@ export default function App() {
           Math.sin(angle * 2 + time * 0.7) * 0.25;
 
         let sound = 0;
+
         if (data) {
-          const index = Math.floor(i / bars * data.length);
+          const index = Math.floor((i / bars) * data.length);
           sound = data[index] / 255;
         }
 
-        const length = radius * (
-          0.10 + Math.max(0, wave + 0.35) * 0.34 + sound * 0.65
-        );
+        const length =
+          radius *
+          (0.10 + Math.max(0, wave + 0.35) * 0.34 + sound * 0.65);
 
         const inner = radius * 1.08;
         const outer = inner + length;
 
         ctx.beginPath();
+
         ctx.moveTo(
           cx + Math.cos(angle) * inner,
           cy + Math.sin(angle) * inner
         );
+
         ctx.lineTo(
           cx + Math.cos(angle) * outer,
           cy + Math.sin(angle) * outer
@@ -86,7 +95,7 @@ export default function App() {
         ctx.stroke();
       }
 
-      // Two fine circular rings
+      // Inner circular rings
       ctx.beginPath();
       ctx.arc(cx, cy, radius * 0.99, 0, Math.PI * 2);
       ctx.strokeStyle = "rgba(255,255,255,0.65)";
@@ -104,6 +113,7 @@ export default function App() {
 
     resize();
     draw();
+
     window.addEventListener("resize", resize);
 
     return () => {
@@ -112,9 +122,11 @@ export default function App() {
     };
   }, []);
 
+  // Microphone on/off
   async function toggleRecording() {
     if (recording) {
-      streamRef.current?.getTracks().forEach(track => track.stop());
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+
       streamRef.current = null;
 
       if (audioContextRef.current) {
@@ -124,13 +136,14 @@ export default function App() {
 
       analyserRef.current = null;
       dataRef.current = null;
+
       setRecording(false);
       return;
     }
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: true
+        audio: true,
       });
 
       const AudioClass =
@@ -142,12 +155,16 @@ export default function App() {
 
       analyser.fftSize = 256;
       analyser.smoothingTimeConstant = 0.85;
+
       source.connect(analyser);
 
       streamRef.current = stream;
       audioContextRef.current = audio;
       analyserRef.current = analyser;
-      dataRef.current = new Uint8Array(analyser.frequencyBinCount);
+
+      dataRef.current = new Uint8Array(
+        analyser.frequencyBinCount
+      );
 
       setRecording(true);
     } catch (error) {
@@ -155,9 +172,10 @@ export default function App() {
     }
   }
 
+  // Clean up microphone
   useEffect(() => {
     return () => {
-      streamRef.current?.getTracks().forEach(track => track.stop());
+      streamRef.current?.getTracks().forEach((track) => track.stop());
       audioContextRef.current?.close();
     };
   }, []);
@@ -168,19 +186,27 @@ export default function App() {
 
       {/* Top buttons */}
       <header style={styles.header}>
+        {/* Search icon only */}
         <button
           type="button"
           aria-label="Search"
           style={styles.topButton}
         >
-          <svg viewBox="0 0 24 24" width="24" height="24"
-            fill="none" stroke="white" strokeWidth="2"
-            strokeLinecap="round">
+          <svg
+            viewBox="0 0 24 24"
+            width="30"
+            height="30"
+            fill="none"
+            stroke="white"
+            strokeWidth="2"
+            strokeLinecap="round"
+          >
             <circle cx="11" cy="11" r="7" />
             <path d="m16 16 5 5" />
           </svg>
         </button>
 
+        {/* Three-line menu */}
         <button
           type="button"
           aria-label="Menu"
@@ -193,6 +219,7 @@ export default function App() {
         </button>
       </header>
 
+      {/* Menu panel */}
       {menuOpen && (
         <div style={styles.menuPanel}>
           <div>Home</div>
@@ -201,7 +228,7 @@ export default function App() {
         </div>
       )}
 
-      {/* White circular logo centre */}
+      {/* Centre white circle and fitted logo */}
       <button
         type="button"
         onClick={toggleRecording}
@@ -215,7 +242,7 @@ export default function App() {
         />
       </button>
 
-      {/* Bottom navigation dots */}
+      {/* Three navigation dots */}
       <footer style={styles.footer}>
         <span style={styles.activeDot} />
         <span style={styles.dot} />
@@ -233,15 +260,16 @@ const styles = {
     minHeight: "500px",
     overflow: "hidden",
     background: "#1598F7",
-    fontFamily: "Arial, sans-serif"
+    fontFamily: "Arial, sans-serif",
   },
 
   canvas: {
     position: "absolute",
     inset: 0,
-    pointerEvents: "none"
+    pointerEvents: "none",
   },
 
+  // Header
   header: {
     position: "absolute",
     top: 0,
@@ -251,32 +279,34 @@ const styles = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    zIndex: 5
+    zIndex: 5,
   },
 
+  // No circles around buttons
   topButton: {
     width: "44px",
     height: "44px",
-    border: "1.5px solid rgba(255,255,255,0.9)",
-    borderRadius: "50%",
-    background: "rgba(255,255,255,0.08)",
+    border: "none",
+    borderRadius: "0",
+    background: "transparent",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
     gap: "5px",
     padding: 0,
-    cursor: "pointer"
+    cursor: "pointer",
   },
 
   menuLine: {
     display: "block",
-    width: "19px",
-    height: "2px",
+    width: "25px",
+    height: "2.5px",
     borderRadius: "3px",
-    background: "white"
+    background: "white",
   },
 
+  // Menu
   menuPanel: {
     position: "absolute",
     top: "80px",
@@ -287,9 +317,10 @@ const styles = {
     gap: "18px",
     color: "white",
     background: "#087DD0",
-    borderRadius: "12px"
+    borderRadius: "12px",
   },
 
+  // Centre circle
   centerButton: {
     position: "absolute",
     left: "50%",
@@ -307,16 +338,18 @@ const styles = {
     overflow: "hidden",
     zIndex: 3,
     cursor: "pointer",
-    boxShadow: "0 0 18px rgba(255,255,255,0.3)"
+    boxShadow: "0 0 18px rgba(255,255,255,0.3)",
   },
 
+  // Correct logo size
   logo: {
-    width: "100%",
-    height: "100%",
+    width: "65%",
+    height: "65%",
     objectFit: "contain",
-    transform: "scale(1.8)"
+    transform: "none",
   },
 
+  // Bottom navigation
   footer: {
     position: "absolute",
     bottom: "30px",
@@ -326,7 +359,7 @@ const styles = {
     justifyContent: "center",
     alignItems: "center",
     gap: "13px",
-    zIndex: 5
+    zIndex: 5,
   },
 
   activeDot: {
@@ -334,13 +367,13 @@ const styles = {
     height: "10px",
     borderRadius: "50%",
     background: "white",
-    boxShadow: "0 0 10px white"
+    boxShadow: "0 0 10px white",
   },
 
   dot: {
     width: "10px",
     height: "10px",
     borderRadius: "50%",
-    background: "rgba(255,255,255,0.4)"
-  }
+    background: "rgba(255,255,255,0.4)",
+  },
 };
