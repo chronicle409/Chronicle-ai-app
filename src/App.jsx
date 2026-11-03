@@ -24,12 +24,14 @@ function Visualizer({ analyser, listening, onToggle }) {
 
     function resize() {
       const rect = canvas.getBoundingClientRect();
-      dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+      dpr = Math.min(window.devicePixelRatio || 1, 1.5);
       width = rect.width;
       height = rect.height;
 
       canvas.width = Math.round(width * dpr);
       canvas.height = Math.round(height * dpr);
+
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
 
@@ -42,6 +44,7 @@ function Visualizer({ analyser, listening, onToggle }) {
       animation = requestAnimationFrame(draw);
 
       if (timestamp - lastFrame < 33) return;
+
       lastFrame = timestamp;
       elapsed += 0.033;
 
@@ -49,66 +52,76 @@ function Visualizer({ analyser, listening, onToggle }) {
 
       const cx = width / 2;
       const cy = height / 2;
-      const radius = Math.min(width, height) * 0.36;
+      const radius = Math.min(width, height) * 0.32;
 
       if (analyser && audioData && listening) {
         analyser.getByteFrequencyData(audioData);
       }
 
+      // Long red colour-spectrum bars
       for (let i = 0; i < COUNT; i++) {
         const angle = (i / COUNT) * Math.PI * 2 - Math.PI / 2;
 
         const audio =
           listening && audioData
-            ? audioData[Math.floor((i / COUNT) * audioData.length)] / 255
+            ? audioData[
+                Math.floor((i / COUNT) * audioData.length)
+              ] / 255
             : 0;
 
         const wave =
           Math.sin(elapsed * 2.5 + i * 0.19) * 0.5 + 0.5;
 
         const movement = listening
-          ? audio * 16 + wave * 4
-          : wave * 3;
+          ? audio * 35 + wave * 8
+          : wave * 7;
 
-        const hue = 185 + (i / COUNT) * 100;
-        const color = `hsl(${hue}, 100%, 66%)`;
+        // Red, crimson, scarlet and pink spectrum
+        const hue = (345 + (i / COUNT) * 45) % 360;
+        const color = `hsl(${hue}, 100%, 62%)`;
 
         ctx.beginPath();
+
         ctx.moveTo(
           cx + Math.cos(angle) * radius,
           cy + Math.sin(angle) * radius
         );
+
         ctx.lineTo(
-          cx + Math.cos(angle) * (radius + 4 + movement),
-          cy + Math.sin(angle) * (radius + 4 + movement)
+          cx + Math.cos(angle) * (radius + 8 + movement),
+          cy + Math.sin(angle) * (radius + 8 + movement)
         );
 
         ctx.strokeStyle = color;
-        ctx.lineWidth = 1.8;
-        ctx.shadowBlur = 8;
+        ctx.lineWidth = 2;
+        ctx.shadowBlur = 10;
         ctx.shadowColor = color;
         ctx.stroke();
       }
 
-      function arc(rotation, color) {
+      // Moving glowing red arcs
+      function drawArc(rotation, color) {
         ctx.beginPath();
+
         ctx.arc(
           cx,
           cy,
-          radius - 10,
+          radius - 13,
           rotation,
-          rotation + 0.95
+          rotation + 1.45
         );
+
         ctx.strokeStyle = color;
-        ctx.lineWidth = 5;
+        ctx.lineWidth = 6;
         ctx.lineCap = "round";
-        ctx.shadowBlur = 15;
+        ctx.shadowBlur = 20;
         ctx.shadowColor = color;
         ctx.stroke();
       }
 
-      arc(elapsed * 0.75, "#a43dff");
-      arc(-elapsed * 0.65 + Math.PI, "#20dfff");
+      drawArc(elapsed * 0.65, "#ff1744");
+      drawArc(-elapsed * 0.55 + Math.PI, "#ff4d6d");
+      drawArc(elapsed * 0.35 + Math.PI, "#d50000");
 
       ctx.shadowBlur = 0;
     }
@@ -124,16 +137,24 @@ function Visualizer({ analyser, listening, onToggle }) {
   return (
     <button
       type="button"
-      className="visualizer-button"
+      className={`visualizer-button ${listening ? "is-listening" : ""}`}
       onClick={onToggle}
       aria-label={listening ? "Stop listening" : "Start listening"}
     >
       <div className="visualizer-container">
-        <canvas ref={canvasRef} className="visualizer-canvas" />
+
+        <canvas
+          ref={canvasRef}
+          className="visualizer-canvas"
+        />
 
         <div className="logo-circle">
-          <img src="/findora-logo.png" alt="FINDORA" />
+          <img
+            src="/findora-logo.png"
+            alt="FINDORA"
+          />
         </div>
+
       </div>
     </button>
   );
@@ -149,18 +170,23 @@ export default function App() {
   const audioRef = useRef(null);
   const streamRef = useRef(null);
 
+  async function stopListening() {
+    streamRef.current?.getTracks().forEach(track => track.stop());
+
+    if (audioRef.current) {
+      await audioRef.current.close().catch(() => {});
+    }
+
+    streamRef.current = null;
+    audioRef.current = null;
+
+    setAnalyser(null);
+    setListening(false);
+  }
+
   async function toggleListening() {
     if (listening) {
-      streamRef.current?.getTracks().forEach(track => track.stop());
-
-      if (audioRef.current) {
-        await audioRef.current.close().catch(() => {});
-      }
-
-      streamRef.current = null;
-      audioRef.current = null;
-      setAnalyser(null);
-      setListening(false);
+      await stopListening();
       return;
     }
 
@@ -171,6 +197,12 @@ export default function App() {
 
       const AudioClass =
         window.AudioContext || window.webkitAudioContext;
+
+      if (!AudioClass) {
+        stream.getTracks().forEach(track => track.stop());
+        alert("Audio is not supported on this browser.");
+        return;
+      }
 
       const audio = new AudioClass();
       await audio.resume();
@@ -186,6 +218,7 @@ export default function App() {
 
       setAnalyser(analyserNode);
       setListening(true);
+
     } catch (error) {
       alert("Please allow microphone access for FINDORA.");
     }
@@ -205,8 +238,8 @@ export default function App() {
 
         <button
           className="top-icon"
-          aria-label="Menu"
           type="button"
+          aria-label="Menu"
           onClick={() => {
             setMenuOpen(!menuOpen);
             setSearchOpen(false);
@@ -219,8 +252,8 @@ export default function App() {
 
         <button
           className="top-icon"
-          aria-label="Search"
           type="button"
+          aria-label="Search"
           onClick={() => {
             setSearchOpen(!searchOpen);
             setMenuOpen(false);
@@ -237,8 +270,8 @@ export default function App() {
       {menuOpen && (
         <div className="menu-panel">
           <button
-            className="menu-mic"
             type="button"
+            className="menu-mic"
             aria-label="Toggle microphone"
             onClick={() => {
               setMenuOpen(false);
