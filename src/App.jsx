@@ -10,6 +10,8 @@ function Visualizer({ analyser, listening, onToggle }) {
     if (!canvas) return;
 
     const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
     let animation;
     let elapsed = 0;
     let lastFrame = 0;
@@ -18,16 +20,34 @@ function Visualizer({ analyser, listening, onToggle }) {
     let dpr = 1;
 
     const COUNT = 180;
+
     const audioData = analyser
       ? new Uint8Array(analyser.frequencyBinCount)
       : null;
 
+    // Prepare bar positions and colours only once.
+    const bars = Array.from({ length: COUNT }, (_, i) => ({
+      angle: (i / COUNT) * Math.PI * 2 - Math.PI / 2,
+      hue: (345 + (i / COUNT) * 45) % 360,
+    }));
+
     function resize() {
       const rect = canvas.getBoundingClientRect();
 
+      const newWidth = rect.width;
+      const newHeight = rect.height;
+
+      if (
+        width === newWidth &&
+        height === newHeight
+      ) {
+        return;
+      }
+
+      width = newWidth;
+      height = newHeight;
+
       dpr = Math.min(window.devicePixelRatio || 1, 1.5);
-      width = rect.width;
-      height = rect.height;
 
       canvas.width = Math.round(width * dpr);
       canvas.height = Math.round(height * dpr);
@@ -40,34 +60,73 @@ function Visualizer({ analyser, listening, onToggle }) {
     const observer = new ResizeObserver(resize);
     observer.observe(canvas);
 
+    if (analyser) {
+      analyser.smoothingTimeConstant = 0.82;
+    }
+
+    function drawArc(cx, cy, radius, rotation, color) {
+      ctx.beginPath();
+
+      ctx.arc(
+        cx,
+        cy,
+        radius,
+        rotation,
+        rotation + 1.45
+      );
+
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 5;
+      ctx.lineCap = "round";
+
+      // Glow is reserved for the three arcs,
+      // rather than all 180 bars.
+      ctx.shadowBlur = 13;
+      ctx.shadowColor = color;
+
+      ctx.stroke();
+    }
+
     function draw(timestamp) {
       animation = requestAnimationFrame(draw);
 
-      if (timestamp - lastFrame < 33) return;
+      // Limit unnecessary rendering work.
+      if (timestamp - lastFrame < 16) return;
+
+      const delta = lastFrame
+        ? Math.min((timestamp - lastFrame) / 1000, 0.05)
+        : 0;
 
       lastFrame = timestamp;
-      elapsed += 0.033;
+      elapsed += delta;
+
+      if (!width || !height) return;
 
       ctx.clearRect(0, 0, width, height);
 
       const cx = width / 2;
       const cy = height / 2;
+
       const radius = Math.min(width, height) * 0.32;
 
       if (analyser && audioData && listening) {
         analyser.getByteFrequencyData(audioData);
       }
 
-      // Long red colour-spectrum bars
-      for (let i = 0; i < COUNT; i++) {
-        const angle = (i / COUNT) * Math.PI * 2 - Math.PI / 2;
+      // Reset expensive shadow effects before drawing bars.
+      ctx.shadowBlur = 0;
 
-        const audio =
-          listening && audioData
-            ? audioData[
-                Math.floor((i / COUNT) * audioData.length)
-              ] / 255
-            : 0;
+      // Draw the 180 red radial bars.
+      for (let i = 0; i < COUNT; i++) {
+        const bar = bars[i];
+
+        const audio = listening && audioData
+          ? audioData[
+              Math.floor(
+                (i / COUNT) * audioData.length
+              )
+            ] / 255
+          : 0;
 
         const wave =
           Math.sin(elapsed * 2.5 + i * 0.19) * 0.5 + 0.5;
@@ -76,52 +135,55 @@ function Visualizer({ analyser, listening, onToggle }) {
           ? audio * 35 + wave * 8
           : wave * 7;
 
-        // Red, crimson, scarlet and pink spectrum
-        const hue = (345 + (i / COUNT) * 45) % 360;
-        const color = `hsl(${hue}, 100%, 62%)`;
+        const startRadius = radius;
+        const endRadius = radius + 8 + movement;
+
+        const cos = Math.cos(bar.angle);
+        const sin = Math.sin(bar.angle);
 
         ctx.beginPath();
 
         ctx.moveTo(
-          cx + Math.cos(angle) * radius,
-          cy + Math.sin(angle) * radius
+          cx + cos * startRadius,
+          cy + sin * startRadius
         );
 
         ctx.lineTo(
-          cx + Math.cos(angle) * (radius + 8 + movement),
-          cy + Math.sin(angle) * (radius + 8 + movement)
+          cx + cos * endRadius,
+          cy + sin * endRadius
         );
 
-        ctx.strokeStyle = color;
+        ctx.strokeStyle = `hsl(${bar.hue}, 100%, 62%)`;
         ctx.lineWidth = 2;
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = color;
-        ctx.stroke();
-      }
-
-      // Moving glowing red arcs
-      function drawArc(rotation, color) {
-        ctx.beginPath();
-
-        ctx.arc(
-          cx,
-          cy,
-          radius - 13,
-          rotation,
-          rotation + 1.45
-        );
-
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 6;
         ctx.lineCap = "round";
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = color;
+
         ctx.stroke();
       }
 
-      drawArc(elapsed * 0.65, "#ff1744");
-      drawArc(-elapsed * 0.55 + Math.PI, "#ff4d6d");
-      drawArc(elapsed * 0.35 + Math.PI, "#d50000");
+      // Draw three smoothly rotating red arcs.
+      drawArc(
+        cx,
+        cy,
+        radius - 13,
+        elapsed * 0.65,
+        "#ff1744"
+      );
+
+      drawArc(
+        cx,
+        cy,
+        radius - 13,
+        -elapsed * 0.55 + Math.PI,
+        "#ff4d6d"
+      );
+
+      drawArc(
+        cx,
+        cy,
+        radius - 13,
+        elapsed * 0.35 + Math.PI,
+        "#d50000"
+      );
 
       ctx.shadowBlur = 0;
     }
@@ -137,12 +199,12 @@ function Visualizer({ analyser, listening, onToggle }) {
   return (
     <button
       type="button"
-      className={`visualizer-button ${listening ? "is-listening" : ""}`}
+      className="visualizer-button"
       onClick={onToggle}
       aria-label={listening ? "Stop listening" : "Start listening"}
+      aria-pressed={listening}
     >
       <div className="visualizer-container">
-
         <canvas
           ref={canvasRef}
           className="visualizer-canvas"
@@ -154,7 +216,6 @@ function Visualizer({ analyser, listening, onToggle }) {
             alt="FINDORA"
           />
         </div>
-
       </div>
     </button>
   );
@@ -163,6 +224,7 @@ function Visualizer({ analyser, listening, onToggle }) {
 export default function App() {
   const [listening, setListening] = useState(false);
   const [analyser, setAnalyser] = useState(null);
+
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchText, setSearchText] = useState("");
@@ -171,7 +233,9 @@ export default function App() {
   const streamRef = useRef(null);
 
   async function stopListening() {
-    streamRef.current?.getTracks().forEach(track => track.stop());
+    streamRef.current?.getTracks().forEach(track => {
+      track.stop();
+    });
 
     if (audioRef.current) {
       await audioRef.current.close().catch(() => {});
@@ -191,6 +255,11 @@ export default function App() {
     }
 
     try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        alert("Microphone access is not supported on this browser.");
+        return;
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: true
       });
@@ -200,17 +269,21 @@ export default function App() {
 
       if (!AudioClass) {
         stream.getTracks().forEach(track => track.stop());
+
         alert("Audio is not supported on this browser.");
         return;
       }
 
       const audio = new AudioClass();
+
       await audio.resume();
 
       const source = audio.createMediaStreamSource(stream);
       const analyserNode = audio.createAnalyser();
 
       analyserNode.fftSize = 512;
+      analyserNode.smoothingTimeConstant = 0.82;
+
       source.connect(analyserNode);
 
       streamRef.current = stream;
@@ -220,13 +293,18 @@ export default function App() {
       setListening(true);
 
     } catch (error) {
+      console.error("FINDORA microphone error:", error);
+
       alert("Please allow microphone access for FINDORA.");
     }
   }
 
   useEffect(() => {
     return () => {
-      streamRef.current?.getTracks().forEach(track => track.stop());
+      streamRef.current?.getTracks().forEach(track => {
+        track.stop();
+      });
+
       audioRef.current?.close();
     };
   }, []);
@@ -302,11 +380,44 @@ export default function App() {
       )}
 
       <section className="main-display">
-        <Visualizer
-          analyser={analyser}
-          listening={listening}
-          onToggle={toggleListening}
-        />
+
+        <div
+          className={`display-content ${
+            listening ? "is-listening" : ""
+          }`}
+        >
+
+          <Visualizer
+            analyser={analyser}
+            listening={listening}
+            onToggle={toggleListening}
+          />
+
+          {listening && (
+            <div className="listening-information">
+
+              <h1>Listening for music</h1>
+
+              <p>
+                Make sure your device can hear the song clearly
+              </p>
+
+              <div
+                className="small-audio-animation"
+                aria-hidden="true"
+              >
+                <span />
+                <span />
+                <span />
+                <span />
+                <span />
+              </div>
+
+            </div>
+          )}
+
+        </div>
+
       </section>
 
     </main>
