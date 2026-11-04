@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import "./App.css";
 
@@ -16,7 +17,11 @@ function playFindoraSound(type = "on") {
 
   findoraAudio = new Audio(soundFile);
   findoraAudio.volume = 1;
-  findoraAudio.play().catch(console.error);
+  findoraAudio.preload = "auto";
+
+  findoraAudio.play().catch((error) => {
+    console.error("Chronicle sound error:", error);
+  });
 
   return findoraAudio;
 }
@@ -36,42 +41,40 @@ function Waveform() {
   );
 }
 
+const visualizerBars = Array.from({ length: 96 }, (_, i) => {
+  const angle = (i * 360) / 96 - 90;
+
+  return {
+    angle,
+    delay: `${(i % 12) * 0.07}s`,
+    duration: `${0.45 + (i % 5) * 0.12}s`,
+    color: i < 48 ? "#ed174c" : "#d66a32",
+  };
+});
+
 function Visualizer() {
-  const bars = Array.from({ length: 120 }, (_, i) => {
-    const angle = (i * 360) / 120;
-    const variation =
-      5 + Math.abs(Math.sin(i * 0.45)) * 8;
-
-    const inner = 105;
-    const outer = inner + variation;
-
-    const rad = (angle * Math.PI) / 180;
-
-    return {
-      x1: 130 + inner * Math.cos(rad),
-      y1: 130 + inner * Math.sin(rad),
-      x2: 130 + outer * Math.cos(rad),
-      y2: 130 + outer * Math.sin(rad),
-      delay: `${i * 0.018}s`,
-      color: i < 65 ? "#d66a32" : "#e51c50",
-    };
-  });
-
   return (
     <svg className="visualizer" viewBox="0 0 260 260">
-      {bars.map((bar, i) => (
-        <line
+      {visualizerBars.map((bar, i) => (
+        <g
           key={i}
-          x1={bar.x1}
-          y1={bar.y1}
-          x2={bar.x2}
-          y2={bar.y2}
-          stroke={bar.color}
-          strokeWidth="2"
-          strokeLinecap="round"
-          className="equalizer-bar"
-          style={{ animationDelay: bar.delay }}
-        />
+          transform={`rotate(${bar.angle} 130 130)`}
+        >
+          <line
+            className="equalizer-bar"
+            x1="130"
+            y1="10"
+            x2="130"
+            y2="25"
+            stroke={bar.color}
+            strokeWidth="3"
+            strokeLinecap="round"
+            style={{
+              animationDelay: bar.delay,
+              animationDuration: bar.duration,
+            }}
+          />
+        </g>
       ))}
 
       <circle
@@ -87,6 +90,13 @@ function Visualizer() {
         r="84"
         className="pink-arc"
       />
+
+      <circle
+        cx="130"
+        cy="130"
+        r="76"
+        className="orange-arc"
+      />
     </svg>
   );
 }
@@ -95,19 +105,24 @@ export default function App() {
   const [listening, setListening] = useState(false);
 
   function handleVoiceClick() {
-    playFindoraSound(listening ? "off" : "on");
-    setListening(!listening);
+    if (listening) {
+      playFindoraSound("off");
+      setListening(false);
+    } else {
+      playFindoraSound("on");
+      setListening(true);
+    }
   }
 
   return (
     <main className={`chronicle-app ${listening ? "is-listening" : ""}`}>
       <header className="chronicle-header">
-        <button>☰</button>
-        <button>⌕</button>
+        <button aria-label="Menu">☰</button>
+        <button aria-label="Search">⌕</button>
       </header>
 
       <div className="visualizer-container">
-        <Visualizer />
+        {listening && <Visualizer />}
 
         <div className="voice-circle">
           <Waveform />
@@ -118,7 +133,9 @@ export default function App() {
         <>
           <section className="listening-info">
             <h2>Listening for music</h2>
-            <p>Make sure your device can hear the sound clearly</p>
+            <p>
+              Make sure your device can hear the sound clearly
+            </p>
 
             <div className="sound-bars">
               {Array.from({ length: 5 }, (_, i) => (
@@ -127,7 +144,10 @@ export default function App() {
             </div>
           </section>
 
-          <button className="stop-button" onClick={handleVoiceClick}>
+          <button
+            className="stop-button"
+            onClick={handleVoiceClick}
+          >
             Stop listening
           </button>
         </>
@@ -143,10 +163,12 @@ export default function App() {
             <span>Ask Chronicle</span>
             <span>☺</span>
             <span>🎙</span>
-            <button onClick={handleVoiceClick}>Voice</button>
+            <button onClick={handleVoiceClick}>
+              Voice
+            </button>
           </div>
         </>
       )}
     </main>
   );
-              }
+}
