@@ -1,317 +1,182 @@
 
-* {
-  box-sizing: border-box;
-}
-
-html,
-body,
-#root {
-  margin: 0;
-  min-height: 100%;
+.chronicle-app {
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
   background: #000;
-}
-
-body {
-  font-family: Arial, sans-serif;
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 button {
-  font: inherit;
-  cursor: pointer;
-}
-
-.chronicle-app {
-  min-height: 100vh;
-  min-height: 100dvh;
-  width: 100%;
-  background: #000;
   color: white;
-  position: relative;
-  overflow: hidden;
-  padding: 20px 25px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .chronicle-header {
+  position: absolute;
+  top: 8%;
+  left: 5%;
+  right: 5%;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  position: relative;
   z-index: 5;
 }
 
-.chronicle-header button {
-  background: transparent;
-  border: none;
-  color: white;
+.header-button {
+  width: 45px;
+  height: 45px;
   font-size: 32px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
-
-/* Central visualizer */
 
 .visualizer-container {
   position: absolute;
-  top: 50%;
+  top: 37%;
   left: 50%;
-  width: 260px;
-  height: 260px;
   transform: translate(-50%, -50%);
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
 }
-
-.visualizer {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-}
-
-/* Radial bars: visibly stretch and shrink */
-
-.equalizer-bar {
-  transform-box: fill-box;
-  transform-origin: 50% 100%;
-  animation: barPulse 0.65s ease-in-out infinite alternate;
-  will-change: transform;
-}
-
-@keyframes barPulse {
-  0% {
-    transform: scaleY(0.35);
-    opacity: 0.55;
-  }
-
-  50% {
-    transform: scaleY(1.5);
-    opacity: 1;
-  }
-
-  100% {
-    transform: scaleY(0.65);
-    opacity: 0.8;
-  }
-}
-
-/* Rotating broken circular rings */
-
-.red-arc,
-.pink-arc,
-.orange-arc {
-  fill: none;
-  stroke-linecap: round;
-  stroke-width: 3.5;
-  transform-box: view-box;
-  transform-origin: center;
-  will-change: transform;
-}
-
-.red-arc {
-  stroke: #ed174c;
-  stroke-dasharray: 150 65 75 90;
-  animation: rotateArc 3s linear infinite;
-}
-
-.pink-arc {
-  stroke: #ff315f;
-  stroke-width: 3;
-  stroke-dasharray: 100 45 65 100;
-  animation: rotateArcReverse 4s linear infinite;
-}
-
-.orange-arc {
-  stroke: #d66a32;
-  stroke-width: 3;
-  stroke-dasharray: 75 45 110 60;
-  animation: rotateArc 5s linear infinite;
-}
-
-@keyframes rotateArc {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes rotateArcReverse {
-  to {
-    transform: rotate(-360deg);
-  }
-}
-
-/* White centre circle */
 
 .voice-circle {
-  position: relative;
-  z-index: 2;
-  width: 145px;
-  height: 145px;
-  background: white;
+  width: 190px;
+  height: 190px;
   border-radius: 50%;
+  background: white;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.waveform {
-  width: 85px;
-  height: 55px;
+.voice-circle svg {
+  width: 75%;
+  height: 45%;
 }
 
-/* Listening animation moves into the centre */
-
-.is-listening .visualizer-container {
-  animation: riseToCenter 0.8s ease-out both;
+.recording-animation {
+  display: block;
+  width: min(85vw, 480px);
+  height: auto;
+  object-fit: contain;
+  background: #000;
 }
-
-@keyframes riseToCenter {
-  from {
-    top: calc(50% + 180px);
-  }
-
-  to {
-    top: 50%;
-  }
-}
-
-/* Home screen buttons */
 
 .home-actions {
   position: absolute;
-  bottom: 125px;
-  left: 0;
-  right: 0;
+  left: 8%;
+  bottom: 19%;
   display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 10px;
-  padding: 15px;
+  flex-direction: column;
+  gap: 27px;
 }
 
 .home-actions button {
-  background: #191919;
-  color: white;
-  border: 1px solid #333;
-  border-radius: 30px;
-  padding: 15px 18px;
+  display: flex;
+  align-items: center;
+  text-align: left;
+  font-size: 19px;
+  gap: 15px;
 }
-
-/* Ask Chronicle input */
 
 .ask-bar {
   position: absolute;
-  bottom: 30px;
-  left: 25px;
-  right: 25px;
-  min-height: 78px;
+  left: 6%;
+  right: 6%;
+  bottom: 3%;
+  min-height: 85px;
+  border-radius: 50px;
   background: #191919;
-  border: 1px solid #333;
-  border-radius: 45px;
-  padding: 12px 15px 12px 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-}
-
-.ask-bar button,
-.stop-button {
-  background: #ed174c;
-  color: white;
-  border: none;
-  border-radius: 30px;
-  padding: 15px 20px;
-}
-
-/* Listening information */
-
-.listening-info {
-  position: absolute;
-  bottom: 155px;
-  left: 15px;
-  right: 15px;
-  text-align: center;
-}
-
-.listening-info h2 {
-  font-size: 20px;
-  font-weight: 500;
-}
-
-.listening-info p {
-  color: #999;
-  font-size: 13px;
-}
-
-.sound-bars {
-  height: 35px;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-around;
+  padding: 9px 10px;
   gap: 5px;
 }
 
-.sound-bars span {
-  width: 5px;
-  height: 10px;
-  background: #ed174c;
-  border-radius: 5px;
-  animation: soundMove 0.6s ease-in-out infinite alternate;
-  will-change: height;
+.plus-button {
+  font-size: 36px;
+  font-weight: 300;
 }
 
-.sound-bars span:nth-child(2) {
-  animation-delay: 0.15s;
-}
-
-.sound-bars span:nth-child(3) {
-  animation-delay: 0.3s;
-}
-
-.sound-bars span:nth-child(4) {
-  animation-delay: 0.45s;
-}
-
-.sound-bars span:nth-child(5) {
-  animation-delay: 0.6s;
-}
-
-@keyframes soundMove {
-  to {
-    height: 30px;
-  }
-}
-
-/* Stop listening button */
-
-.stop-button {
-  position: absolute;
-  bottom: 35px;
-  left: 50%;
-  transform: translateX(-50%);
+.ask-placeholder {
+  flex: 1;
+  font-size: 17px;
   white-space: nowrap;
 }
 
-/* Smaller phone screens */
-
-@media (max-width: 380px) {
-  .ask-bar {
-    left: 12px;
-    right: 12px;
-  }
-
-  .home-actions button {
-    padding: 13px 14px;
-  }
+.small-tool {
+  font-size: 25px;
+  width: 34px;
+  flex-shrink: 0;
 }
 
-/* Respect reduced-motion settings */
+.voice-button {
+  min-height: 60px;
+  padding: 0 12px;
+  border-radius: 40px;
+  background: #ed174c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 17px;
+  flex-shrink: 0;
+}
 
-@media (prefers-reduced-motion: reduce) {
-  .equalizer-bar,
-  .red-arc,
-  .pink-arc,
-  .orange-arc,
-  .sound-bars span {
-    animation-duration: 3s;
+.mini-wave {
+  width: 32px;
+  height: 30px;
+}
+
+.listening-controls {
+  position: absolute;
+  bottom: 8%;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.listening-controls p {
+  font-size: 20px;
+}
+
+.stop-button {
+  background: #ed174c;
+  border-radius: 35px;
+  padding: 16px 35px;
+  font-size: 17px;
+}
+
+@media (max-height: 650px) {
+  .home-actions {
+    bottom: 18%;
+    gap: 12px;
+  }
+
+  .ask-bar {
+    min-height: 65px;
+  }
+
+  .voice-button {
+    min-height: 48px;
+  }
+
+  .voice-circle {
+    width: 145px;
+    height: 145px;
   }
 }
