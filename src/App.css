@@ -2,86 +2,155 @@
   box-sizing: border-box;
 }
 
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+  background: #000;
+}
+
+body {
+  font-family: Arial, sans-serif;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
 .chronicle-app {
   min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
   background: #000;
-  color: white;
-  font-family: Arial, sans-serif;
+  color: #fff;
   position: relative;
   overflow: hidden;
-  padding: 25px;
+  padding: 20px 25px;
 }
 
 .chronicle-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  position: relative;
+  z-index: 5;
 }
 
 .chronicle-header button {
+  color: white;
   background: transparent;
   border: none;
-  color: white;
-  font-size: 28px;
+  font-size: 32px;
+  padding: 0;
 }
 
-.voice-circle {
+/* Central voice circle */
+
+.voice-container {
   position: absolute;
+  width: 240px;
+  height: 240px;
   top: 50%;
   left: 50%;
-  width: 125px;
-  height: 125px;
-  background: white;
-  border-radius: 50%;
+  transform: translate(-50%, -50%);
   display: flex;
   justify-content: center;
   align-items: center;
-  transform: translate(-50%, -50%);
 }
 
-.voice-circle span {
-  color: #ed174c;
-  font-size: 48px;
-}
-
-.is-listening .voice-circle {
-  animation: riseToCenter 0.8s ease-out;
-}
-
-.is-listening .voice-circle::before,
-.is-listening .voice-circle::after {
-  content: "";
-  position: absolute;
-  inset: -15px;
-  border: 3px solid #ed174c;
+.voice-circle {
+  width: 145px;
+  height: 145px;
+  background: #fff;
   border-radius: 50%;
-  animation: pulse 1.5s infinite;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 2;
 }
 
-.is-listening .voice-circle::after {
-  border-color: #ff754b;
-  animation-delay: 0.7s;
+.waveform {
+  width: 75px;
+  height: 55px;
+  color: #ed174c;
+}
+
+/* Animated red and orange rings */
+
+.energy-rings {
+  position: absolute;
+  width: 240px;
+  height: 240px;
+  overflow: visible;
+  animation: ringRotate 7s linear infinite;
+}
+
+.ring {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ring-orange {
+  stroke: #a94d25;
+  stroke-width: 5;
+  stroke-dasharray: 180 35 70 25;
+  animation: ringFlow 2.5s linear infinite;
+}
+
+.ring-red {
+  stroke: #b7193c;
+  stroke-width: 5;
+  stroke-dasharray: 140 25 55 20;
+  animation: ringFlow 2s linear infinite reverse;
+}
+
+.ring-pink {
+  stroke: #e52355;
+  stroke-width: 4;
+  stroke-dasharray: 100 30 65 20;
+  animation: ringFlow 3s linear infinite;
+}
+
+.ring-bright {
+  stroke: #ff334f;
+  stroke-width: 3;
+  stroke-dasharray: 85 45 35 25;
+  animation: ringFlow 1.8s linear infinite reverse;
+}
+
+@keyframes ringRotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes ringFlow {
+  to {
+    stroke-dashoffset: -300;
+  }
+}
+
+/* Move the animation upward when Voice is tapped */
+
+.is-listening .voice-container {
+  animation: riseToCenter 0.8s ease-out both;
 }
 
 @keyframes riseToCenter {
   from {
-    transform: translate(-50%, calc(-50% + 180px));
+    top: calc(50% + 180px);
   }
+
   to {
-    transform: translate(-50%, -50%);
+    top: 50%;
   }
 }
 
-@keyframes pulse {
-  from {
-    transform: scale(0.9);
-    opacity: 1;
-  }
-  to {
-    transform: scale(1.6);
-    opacity: 0;
-  }
-}
+/* Home screen buttons */
 
 .home-actions {
   position: absolute;
@@ -95,23 +164,31 @@
   padding: 15px;
 }
 
-.home-actions button,
-.ask-bar {
-  background: #171717;
+.home-actions button {
+  background: #191919;
   color: white;
   border: 1px solid #333;
-  border-radius: 25px;
-  padding: 12px 15px;
+  border-radius: 30px;
+  padding: 17px 20px;
+  font-size: 16px;
 }
+
+/* Bottom Ask Chronicle bar */
 
 .ask-bar {
   position: absolute;
   bottom: 30px;
   left: 25px;
   right: 25px;
+  min-height: 78px;
+  background: #191919;
+  border: 1px solid #333;
+  border-radius: 45px;
+  padding: 12px 15px 12px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 10px;
 }
 
 .ask-bar button,
@@ -119,38 +196,47 @@
   background: #ed174c;
   color: white;
   border: none;
-  border-radius: 25px;
-  padding: 12px 18px;
+  border-radius: 30px;
+  padding: 15px 22px;
+  font-size: 16px;
 }
+
+/* Listening dots */
 
 .voice-dots {
   position: absolute;
-  bottom: 110px;
+  bottom: 115px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  gap: 9px;
+  align-items: center;
+  gap: 10px;
 }
 
 .voice-dots span {
-  width: 7px;
-  height: 7px;
+  width: 8px;
+  height: 8px;
   background: white;
   border-radius: 50%;
-  animation: dotPulse 1s infinite alternate;
+  animation: dotPulse 0.8s infinite alternate;
 }
 
 .voice-dots span:nth-child(2) {
-  animation-delay: 0.3s;
+  animation-delay: 0.25s;
 }
 
 .voice-dots span:nth-child(3) {
-  animation-delay: 0.6s;
+  animation-delay: 0.5s;
 }
 
 @keyframes dotPulse {
-  to {
+  from {
     opacity: 0.3;
+    transform: translateY(0);
+  }
+
+  to {
+    opacity: 1;
     transform: translateY(-5px);
   }
 }
@@ -160,4 +246,30 @@
   bottom: 35px;
   left: 50%;
   transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 380px) {
+  .ask-bar {
+    left: 12px;
+    right: 12px;
+    padding-left: 14px;
+    gap: 7px;
+  }
+
+  .ask-bar button {
+    padding: 13px 16px;
+  }
+
+  .home-actions button {
+    padding: 13px 15px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .energy-rings,
+  .ring,
+  .voice-dots span {
+    animation-duration: 8s;
+  }
 }
