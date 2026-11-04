@@ -1,33 +1,163 @@
-/* SMOOTH TOP FADE */
-
-.display-content {
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-
-  -webkit-mask-image: linear-gradient(
-    to bottom,
-    transparent 0%,
-    black 18%,
-    black 100%
-  );
-
-  mask-image: linear-gradient(
-    to bottom,
-    transparent 0%,
-    black 18%,
-    black 100%
-  );
-
-  transform: translate3d(0, 0, 0);
-  transition: transform 650ms cubic-bezier(0.16, 1, 0.3, 1);
-  will-change: transform;
+* {
+  box-sizing: border-box;
 }
 
-.display-content.is-listening {
-  transform: translate3d(0, -28px, 0);
+.chronicle-app {
+  min-height: 100vh;
+  background: #000;
+  color: white;
+  font-family: Arial, sans-serif;
+  position: relative;
+  overflow: hidden;
+  padding: 25px;
+}
+
+.chronicle-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.chronicle-header button {
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 28px;
+}
+
+.voice-circle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 125px;
+  height: 125px;
+  background: white;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transform: translate(-50%, -50%);
+}
+
+.voice-circle span {
+  color: #ed174c;
+  font-size: 48px;
+}
+
+.is-listening .voice-circle {
+  animation: riseToCenter 0.8s ease-out;
+}
+
+.is-listening .voice-circle::before,
+.is-listening .voice-circle::after {
+  content: "";
+  position: absolute;
+  inset: -15px;
+  border: 3px solid #ed174c;
+  border-radius: 50%;
+  animation: pulse 1.5s infinite;
+}
+
+.is-listening .voice-circle::after {
+  border-color: #ff754b;
+  animation-delay: 0.7s;
+}
+
+@keyframes riseToCenter {
+  from {
+    transform: translate(-50%, calc(-50% + 180px));
+  }
+  to {
+    transform: translate(-50%, -50%);
+  }
+}
+
+@keyframes pulse {
+  from {
+    transform: scale(0.9);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+.home-actions {
+  position: absolute;
+  bottom: 125px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 15px;
+}
+
+.home-actions button,
+.ask-bar {
+  background: #171717;
+  color: white;
+  border: 1px solid #333;
+  border-radius: 25px;
+  padding: 12px 15px;
+}
+
+.ask-bar {
+  position: absolute;
+  bottom: 30px;
+  left: 25px;
+  right: 25px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ask-bar button,
+.stop-button {
+  background: #ed174c;
+  color: white;
+  border: none;
+  border-radius: 25px;
+  padding: 12px 18px;
+}
+
+.voice-dots {
+  position: absolute;
+  bottom: 110px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 9px;
+}
+
+.voice-dots span {
+  width: 7px;
+  height: 7px;
+  background: white;
+  border-radius: 50%;
+  animation: dotPulse 1s infinite alternate;
+}
+
+.voice-dots span:nth-child(2) {
+  animation-delay: 0.3s;
+}
+
+.voice-dots span:nth-child(3) {
+  animation-delay: 0.6s;
+}
+
+@keyframes dotPulse {
+  to {
+    opacity: 0.3;
+    transform: translateY(-5px);
+  }
+}
+
+.stop-button {
+  position: absolute;
+  bottom: 35px;
+  left: 50%;
+  transform: translateX(-50%);
 }
