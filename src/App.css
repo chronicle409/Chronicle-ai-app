@@ -24,7 +24,7 @@ button {
   min-height: 100dvh;
   width: 100%;
   background: #000;
-  color: #fff;
+  color: white;
   position: relative;
   overflow: hidden;
   padding: 20px 25px;
@@ -39,104 +39,116 @@ button {
 }
 
 .chronicle-header button {
-  color: white;
   background: transparent;
   border: none;
+  color: white;
   font-size: 32px;
-  padding: 0;
 }
 
-/* Central voice circle */
+/* Main circle */
 
-.voice-container {
+.visualizer-container {
   position: absolute;
-  width: 240px;
-  height: 240px;
   top: 50%;
   left: 50%;
+  width: 260px;
+  height: 260px;
   transform: translate(-50%, -50%);
   display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.voice-circle {
-  width: 145px;
-  height: 145px;
-  background: #fff;
-  border-radius: 50%;
-  display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
-  z-index: 2;
 }
 
-.waveform {
-  width: 75px;
-  height: 55px;
-  color: #ed174c;
-}
-
-/* Animated red and orange rings */
-
-.energy-rings {
+.visualizer {
+  display: none;
   position: absolute;
-  width: 240px;
-  height: 240px;
+  width: 100%;
+  height: 100%;
   overflow: visible;
-  animation: ringRotate 7s linear infinite;
 }
 
-.ring {
+.is-listening .visualizer {
+  display: block;
+}
+
+/* Moving circular bars */
+
+.equalizer-bar {
+  transform-box: view-box;
+  transform-origin: 130px 130px;
+  animation: barMove 0.65s ease-in-out infinite alternate;
+}
+
+@keyframes barMove {
+  from {
+    opacity: 0.45;
+    stroke-width: 2;
+  }
+
+  to {
+    opacity: 1;
+    stroke-width: 4;
+  }
+}
+
+/* Rotating arcs */
+
+.red-arc,
+.pink-arc {
   fill: none;
   stroke-linecap: round;
-  stroke-linejoin: round;
+  stroke-dasharray: 150 65 75 90;
 }
 
-.ring-orange {
-  stroke: #a94d25;
-  stroke-width: 5;
-  stroke-dasharray: 180 35 70 25;
-  animation: ringFlow 2.5s linear infinite;
-}
-
-.ring-red {
-  stroke: #b7193c;
-  stroke-width: 5;
-  stroke-dasharray: 140 25 55 20;
-  animation: ringFlow 2s linear infinite reverse;
-}
-
-.ring-pink {
-  stroke: #e52355;
+.red-arc {
+  stroke: #ed174c;
   stroke-width: 4;
-  stroke-dasharray: 100 30 65 20;
-  animation: ringFlow 3s linear infinite;
+  animation: rotateArc 3s linear infinite;
+  transform-origin: 130px 130px;
 }
 
-.ring-bright {
-  stroke: #ff334f;
+.pink-arc {
+  stroke: #ff315f;
   stroke-width: 3;
-  stroke-dasharray: 85 45 35 25;
-  animation: ringFlow 1.8s linear infinite reverse;
+  stroke-dasharray: 100 45 65 100;
+  animation: rotateArcReverse 4s linear infinite;
+  transform-origin: 130px 130px;
 }
 
-@keyframes ringRotate {
+@keyframes rotateArc {
   to {
     transform: rotate(360deg);
   }
 }
 
-@keyframes ringFlow {
+@keyframes rotateArcReverse {
   to {
-    stroke-dashoffset: -300;
+    transform: rotate(-360deg);
   }
 }
 
-/* Move the animation upward when Voice is tapped */
+/* White centre */
 
-.is-listening .voice-container {
+.voice-circle {
+  position: relative;
+  z-index: 2;
+  width: 145px;
+  height: 145px;
+  background: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.waveform {
+  width: 85px;
+  height: 55px;
+}
+
+/* Move listening animation into position */
+
+.is-listening .visualizer-container {
   animation: riseToCenter 0.8s ease-out both;
 }
 
@@ -150,7 +162,7 @@ button {
   }
 }
 
-/* Home screen buttons */
+/* Home buttons */
 
 .home-actions {
   position: absolute;
@@ -169,11 +181,10 @@ button {
   color: white;
   border: 1px solid #333;
   border-radius: 30px;
-  padding: 17px 20px;
-  font-size: 16px;
+  padding: 15px 18px;
 }
 
-/* Bottom Ask Chronicle bar */
+/* Ask Chronicle bar */
 
 .ask-bar {
   position: absolute;
@@ -197,49 +208,68 @@ button {
   color: white;
   border: none;
   border-radius: 30px;
-  padding: 15px 22px;
-  font-size: 16px;
+  padding: 15px 20px;
 }
 
-/* Listening dots */
+/* Listening information */
 
-.voice-dots {
+.listening-info {
   position: absolute;
-  bottom: 115px;
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: 155px;
+  left: 15px;
+  right: 15px;
+  text-align: center;
+}
+
+.listening-info h2 {
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.listening-info p {
+  color: #999;
+  font-size: 13px;
+}
+
+.sound-bars {
+  height: 35px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: center;
+  gap: 5px;
 }
 
-.voice-dots span {
-  width: 8px;
-  height: 8px;
-  background: white;
-  border-radius: 50%;
-  animation: dotPulse 0.8s infinite alternate;
+.sound-bars span {
+  width: 5px;
+  height: 10px;
+  background: #ed174c;
+  border-radius: 5px;
+  animation: soundMove 0.6s ease-in-out infinite alternate;
 }
 
-.voice-dots span:nth-child(2) {
-  animation-delay: 0.25s;
+.sound-bars span:nth-child(2) {
+  animation-delay: 0.15s;
 }
 
-.voice-dots span:nth-child(3) {
-  animation-delay: 0.5s;
+.sound-bars span:nth-child(3) {
+  animation-delay: 0.3s;
 }
 
-@keyframes dotPulse {
-  from {
-    opacity: 0.3;
-    transform: translateY(0);
-  }
+.sound-bars span:nth-child(4) {
+  animation-delay: 0.45s;
+}
 
+.sound-bars span:nth-child(5) {
+  animation-delay: 0.6s;
+}
+
+@keyframes soundMove {
   to {
-    opacity: 1;
-    transform: translateY(-5px);
+    height: 30px;
   }
 }
+
+/* Stop button */
 
 .stop-button {
   position: absolute;
@@ -253,23 +283,9 @@ button {
   .ask-bar {
     left: 12px;
     right: 12px;
-    padding-left: 14px;
-    gap: 7px;
-  }
-
-  .ask-bar button {
-    padding: 13px 16px;
   }
 
   .home-actions button {
-    padding: 13px 15px;
+    padding: 13px 14px;
   }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .energy-rings,
-  .ring,
-  .voice-dots span {
-    animation-duration: 8s;
   }
-}
