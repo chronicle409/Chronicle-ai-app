@@ -1,3 +1,4 @@
+
 * {
   box-sizing: border-box;
 }
@@ -45,7 +46,7 @@ button {
   font-size: 32px;
 }
 
-/* Main circle */
+/* Central visualizer */
 
 .visualizer-container {
   position: absolute;
@@ -60,51 +61,55 @@ button {
 }
 
 .visualizer {
-  display: none;
   position: absolute;
   width: 100%;
   height: 100%;
   overflow: visible;
 }
 
-.is-listening .visualizer {
-  display: block;
-}
-
-/* Moving circular bars */
+/* Radial bars: visibly stretch and shrink */
 
 .equalizer-bar {
-  transform-box: view-box;
-  transform-origin: 130px 130px;
-  animation: barMove 0.65s ease-in-out infinite alternate;
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: barPulse 0.65s ease-in-out infinite alternate;
+  will-change: transform;
 }
 
-@keyframes barMove {
-  from {
-    opacity: 0.45;
-    stroke-width: 2;
+@keyframes barPulse {
+  0% {
+    transform: scaleY(0.35);
+    opacity: 0.55;
   }
 
-  to {
+  50% {
+    transform: scaleY(1.5);
     opacity: 1;
-    stroke-width: 4;
+  }
+
+  100% {
+    transform: scaleY(0.65);
+    opacity: 0.8;
   }
 }
 
-/* Rotating arcs */
+/* Rotating broken circular rings */
 
 .red-arc,
-.pink-arc {
+.pink-arc,
+.orange-arc {
   fill: none;
   stroke-linecap: round;
-  stroke-dasharray: 150 65 75 90;
+  stroke-width: 3.5;
+  transform-box: view-box;
+  transform-origin: center;
+  will-change: transform;
 }
 
 .red-arc {
   stroke: #ed174c;
-  stroke-width: 4;
+  stroke-dasharray: 150 65 75 90;
   animation: rotateArc 3s linear infinite;
-  transform-origin: 130px 130px;
 }
 
 .pink-arc {
@@ -112,7 +117,13 @@ button {
   stroke-width: 3;
   stroke-dasharray: 100 45 65 100;
   animation: rotateArcReverse 4s linear infinite;
-  transform-origin: 130px 130px;
+}
+
+.orange-arc {
+  stroke: #d66a32;
+  stroke-width: 3;
+  stroke-dasharray: 75 45 110 60;
+  animation: rotateArc 5s linear infinite;
 }
 
 @keyframes rotateArc {
@@ -127,7 +138,7 @@ button {
   }
 }
 
-/* White centre */
+/* White centre circle */
 
 .voice-circle {
   position: relative;
@@ -146,7 +157,7 @@ button {
   height: 55px;
 }
 
-/* Move listening animation into position */
+/* Listening animation moves into the centre */
 
 .is-listening .visualizer-container {
   animation: riseToCenter 0.8s ease-out both;
@@ -162,7 +173,7 @@ button {
   }
 }
 
-/* Home buttons */
+/* Home screen buttons */
 
 .home-actions {
   position: absolute;
@@ -184,7 +195,7 @@ button {
   padding: 15px 18px;
 }
 
-/* Ask Chronicle bar */
+/* Ask Chronicle input */
 
 .ask-bar {
   position: absolute;
@@ -245,6 +256,7 @@ button {
   background: #ed174c;
   border-radius: 5px;
   animation: soundMove 0.6s ease-in-out infinite alternate;
+  will-change: height;
 }
 
 .sound-bars span:nth-child(2) {
@@ -269,7 +281,7 @@ button {
   }
 }
 
-/* Stop button */
+/* Stop listening button */
 
 .stop-button {
   position: absolute;
@@ -278,6 +290,8 @@ button {
   transform: translateX(-50%);
   white-space: nowrap;
 }
+
+/* Smaller phone screens */
 
 @media (max-width: 380px) {
   .ask-bar {
@@ -288,4 +302,16 @@ button {
   .home-actions button {
     padding: 13px 14px;
   }
+}
+
+/* Respect reduced-motion settings */
+
+@media (prefers-reduced-motion: reduce) {
+  .equalizer-bar,
+  .red-arc,
+  .pink-arc,
+  .orange-arc,
+  .sound-bars span {
+    animation-duration: 3s;
   }
+}
