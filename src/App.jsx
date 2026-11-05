@@ -50,14 +50,15 @@ function MiniWave() {
 }
 
 function ListeningAnimation() {
-  const particles = Array.from({ length: 180 }, (_, i) => {
-    const angle = (i * 360) / 180;
+  const particles = Array.from({ length: 240 }, (_, i) => {
+    const angle = (i * 360) / 240;
 
     const variation =
       Math.sin(i * 0.41) * 3 +
-      Math.cos(i * 0.17) * 2;
+      Math.cos(i * 0.17) * 2 +
+      Math.sin(i * 0.09) * 2;
 
-    const radius = 57 + variation;
+    const radius = 88 + variation;
 
     const length =
       2 +
@@ -68,7 +69,7 @@ function ListeningAnimation() {
       angle,
       radius,
       length,
-      delay: `${(i % 25) * -0.09}s`
+      delay: `${(i % 30) * -0.07}s`
     };
   });
 
@@ -83,20 +84,20 @@ function ListeningAnimation() {
           <linearGradient
             id="findoraRedGradient"
             x1="0%"
-            y1="100%"
+            y1="0%"
             x2="100%"
-            y2="0%"
+            y2="100%"
           >
-            <stop offset="0%" stopColor="#7a001e" />
-            <stop offset="25%" stopColor="#ff1744" />
-            <stop offset="50%" stopColor="#ff5577" />
-            <stop offset="75%" stopColor="#ed174c" />
-            <stop offset="100%" stopColor="#8b0030" />
+            <stop offset="0%" stopColor="#ff1744" />
+            <stop offset="30%" stopColor="#ff6688" />
+            <stop offset="55%" stopColor="#ed174c" />
+            <stop offset="80%" stopColor="#a90035" />
+            <stop offset="100%" stopColor="#ff315e" />
           </linearGradient>
 
-          <filter id="findoraRedGlow">
+          <filter id="findoraGlow">
             <feGaussianBlur
-              stdDeviation="3"
+              stdDeviation="2.5"
               result="blur"
             />
             <feMerge>
@@ -106,9 +107,9 @@ function ListeningAnimation() {
           </filter>
         </defs>
 
-        {/* Glowing circular audio particles */}
+        {/* Circular particle spectrum */}
 
-        <g filter="url(#findoraRedGlow)">
+        <g filter="url(#findoraGlow)">
           {particles.map((p, i) => (
             <line
               key={i}
@@ -119,7 +120,7 @@ function ListeningAnimation() {
               y2={160 - p.radius - p.length}
               transform={`rotate(${p.angle} 160 160)`}
               stroke="url(#findoraRedGradient)"
-              strokeWidth={i % 3 === 0 ? 1.8 : 1.2}
+              strokeWidth={i % 4 === 0 ? 1.7 : 1.1}
               strokeLinecap="round"
               style={{
                 animationDelay: p.delay
@@ -128,35 +129,71 @@ function ListeningAnimation() {
           ))}
         </g>
 
-        {/* Glowing circular base */}
+        {/* Fine glowing circular line */}
 
         <circle
           cx="160"
           cy="160"
-          r="57"
+          r="88"
           fill="none"
-          stroke="url(#findoraRedGradient)"
-          strokeWidth="2"
-          opacity="0.8"
-          filter="url(#findoraRedGlow)"
+          stroke="#ed174c"
+          strokeWidth="1"
+          opacity="0.7"
+          filter="url(#findoraGlow)"
           className="findora-base-ring"
         />
 
-        {/* Moving red energy particles */}
+        {/* Rotating energy particles */}
 
         <g className="findora-energy">
-          {Array.from({ length: 36 }, (_, i) => (
+          {Array.from({ length: 48 }, (_, i) => (
             <circle
               key={i}
               cx="160"
-              cy="103"
-              r={i % 4 === 0 ? 1.8 : 1}
+              cy="72"
+              r={i % 4 === 0 ? 1.7 : 1}
               fill="#ff315e"
-              opacity="0.9"
-              transform={`rotate(${i * 10} 160 160)`}
+              opacity="0.95"
+              transform={`rotate(${i * 7.5} 160 160)`}
             />
           ))}
         </g>
+
+        {/* YOUR ORIGINAL WHITE OVAL LOGO */}
+
+        <ellipse
+          cx="160"
+          cy="160"
+          rx="70"
+          ry="54"
+          fill="#ffffff"
+        />
+
+        {/* YOUR ORIGINAL RED WAVEFORM */}
+
+        <path
+          d="
+            M111 160
+            L122 160
+            L130 155
+            L138 164
+            L146 151
+            L153 175
+            L160 132
+            L168 183
+            L176 145
+            L183 164
+            L190 153
+            L198 160
+            L210 160
+          "
+          fill="none"
+          stroke="#ed174c"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="findora-logo-wave"
+        />
 
       </svg>
 
@@ -218,16 +255,18 @@ export default function App() {
         }
 
         .chronicle-app .findora-visualizer {
-          width: min(76vw, 260px);
+          width: min(76vw, 300px);
           height: auto;
           overflow: visible;
         }
+
+        /* PARTICLE MOVEMENT */
 
         .findora-particle {
           transform-box: view-box;
           transform-origin: 160px 160px;
           animation: findoraParticle
-            0.75s ease-in-out infinite alternate;
+            0.65s ease-in-out infinite alternate;
         }
 
         @keyframes findoraParticle {
@@ -236,39 +275,62 @@ export default function App() {
             stroke-width: 0.8px;
           }
 
+          50% {
+            opacity: 0.75;
+          }
+
           100% {
             opacity: 1;
-            stroke-width: 2.2px;
+            stroke-width: 2px;
           }
         }
 
+        /* CIRCULAR RING */
+
         .findora-base-ring {
-          animation: findoraRingPulse
-            1.8s ease-in-out infinite;
           transform-origin: 160px 160px;
+          animation: findoraRingPulse
+            1.5s ease-in-out infinite;
         }
 
         @keyframes findoraRingPulse {
           0%, 100% {
-            opacity: 0.55;
-            stroke-width: 1.5px;
+            opacity: 0.45;
           }
 
           50% {
             opacity: 1;
-            stroke-width: 2.5px;
           }
         }
+
+        /* ROTATING PARTICLES */
 
         .findora-energy {
           transform-origin: 160px 160px;
           animation: findoraEnergyRotate
-            9s linear infinite;
+            12s linear infinite;
         }
 
         @keyframes findoraEnergyRotate {
           to {
             transform: rotate(360deg);
+          }
+        }
+
+        /* LOGO WAVEFORM */
+
+        .findora-logo-wave {
+          animation: logoWaveGlow
+            1.2s ease-in-out infinite alternate;
+        }
+
+        @keyframes logoWaveGlow {
+          from {
+            opacity: 0.65;
+          }
+
+          to {
+            opacity: 1;
           }
         }
 
@@ -322,6 +384,7 @@ export default function App() {
           .findora-particle,
           .findora-base-ring,
           .findora-energy,
+          .findora-logo-wave,
           .bottom-audio-bars span {
             animation-duration: 8s;
           }
