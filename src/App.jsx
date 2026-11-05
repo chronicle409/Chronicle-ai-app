@@ -50,50 +50,55 @@ function MiniWave() {
 }
 
 function ListeningAnimation() {
-  const bars = Array.from({ length: 100 }, (_, i) => {
-    const angle = (i * 360) / 100;
-    const height =
-      7 +
-      Math.abs(Math.sin(i * 0.37)) * 8 +
-      Math.abs(Math.cos(i * 0.19)) * 5;
+  const particles = Array.from({ length: 180 }, (_, i) => {
+    const angle = (i * 360) / 180;
 
-    return (
-      <line
-        key={i}
-        x1="160"
-        y1="17"
-        x2="160"
-        y2={17 + height}
-        transform={`rotate(${angle} 160 160)`}
-        stroke="url(#spectrumGradient)"
-        strokeWidth="2"
-        strokeLinecap="round"
-        opacity="0.95"
-      />
-    );
+    const variation =
+      Math.sin(i * 0.41) * 3 +
+      Math.cos(i * 0.17) * 2;
+
+    const radius = 57 + variation;
+
+    const length =
+      2 +
+      Math.abs(Math.sin(i * 0.31)) * 5 +
+      Math.abs(Math.cos(i * 0.13)) * 3;
+
+    return {
+      angle,
+      radius,
+      length,
+      delay: `${(i % 25) * -0.09}s`
+    };
   });
 
   return (
     <div className="findora-animation">
+
       <svg
         className="findora-visualizer"
         viewBox="0 0 320 320"
       >
         <defs>
           <linearGradient
-            id="spectrumGradient"
+            id="findoraRedGradient"
             x1="0%"
-            y1="0%"
+            y1="100%"
             x2="100%"
-            y2="100%"
+            y2="0%"
           >
-            <stop offset="0%" stopColor="#ff8a00" />
-            <stop offset="45%" stopColor="#ff452d" />
-            <stop offset="100%" stopColor="#ec174c" />
+            <stop offset="0%" stopColor="#7a001e" />
+            <stop offset="25%" stopColor="#ff1744" />
+            <stop offset="50%" stopColor="#ff5577" />
+            <stop offset="75%" stopColor="#ed174c" />
+            <stop offset="100%" stopColor="#8b0030" />
           </linearGradient>
 
-          <filter id="redGlow">
-            <feGaussianBlur stdDeviation="4" result="blur" />
+          <filter id="findoraRedGlow">
+            <feGaussianBlur
+              stdDeviation="3"
+              result="blur"
+            />
             <feMerge>
               <feMergeNode in="blur" />
               <feMergeNode in="SourceGraphic" />
@@ -101,74 +106,63 @@ function ListeningAnimation() {
           </filter>
         </defs>
 
-        {/* Rotating outer audio spectrum */}
-        <g className="spectrum-spin">
-          {bars}
+        {/* Glowing circular audio particles */}
+
+        <g filter="url(#findoraRedGlow)">
+          {particles.map((p, i) => (
+            <line
+              key={i}
+              className="findora-particle"
+              x1="160"
+              y1={160 - p.radius}
+              x2="160"
+              y2={160 - p.radius - p.length}
+              transform={`rotate(${p.angle} 160 160)`}
+              stroke="url(#findoraRedGradient)"
+              strokeWidth={i % 3 === 0 ? 1.8 : 1.2}
+              strokeLinecap="round"
+              style={{
+                animationDelay: p.delay
+              }}
+            />
+          ))}
         </g>
 
-        {/* Outer glowing red ring */}
+        {/* Glowing circular base */}
+
         <circle
           cx="160"
           cy="160"
-          r="118"
+          r="57"
           fill="none"
-          stroke="#ed174c"
-          strokeWidth="3"
-          strokeDasharray="105 42 68 527"
-          strokeLinecap="round"
-          filter="url(#redGlow)"
-          className="outer-red-ring"
+          stroke="url(#findoraRedGradient)"
+          strokeWidth="2"
+          opacity="0.8"
+          filter="url(#findoraRedGlow)"
+          className="findora-base-ring"
         />
 
-        {/* Inner glowing ring */}
-        <circle
-          cx="160"
-          cy="160"
-          r="105"
-          fill="none"
-          stroke="#ff1744"
-          strokeWidth="4"
-          strokeDasharray="115 545"
-          strokeLinecap="round"
-          filter="url(#redGlow)"
-          className="inner-red-ring"
-        />
+        {/* Moving red energy particles */}
 
-        {/* White centre */}
-        <circle
-          cx="160"
-          cy="160"
-          r="91"
-          fill="#ffffff"
-          className="centre-pulse"
-        />
+        <g className="findora-energy">
+          {Array.from({ length: 36 }, (_, i) => (
+            <circle
+              key={i}
+              cx="160"
+              cy="103"
+              r={i % 4 === 0 ? 1.8 : 1}
+              fill="#ff315e"
+              opacity="0.9"
+              transform={`rotate(${i * 10} 160 160)`}
+            />
+          ))}
+        </g>
 
-        {/* Red waveform */}
-        <path
-          d="M111 160
-             L122 160
-             L130 155
-             L138 164
-             L146 151
-             L153 175
-             L160 132
-             L168 183
-             L176 145
-             L183 164
-             L190 153
-             L198 160
-             L210 160"
-          fill="none"
-          stroke="#ed174c"
-          strokeWidth="3"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="centre-wave"
-        />
       </svg>
 
       <div className="findora-listening-text">
         <h3>Listening for music</h3>
+
         <p>
           Make sure your device can hear the song
           <br />
@@ -187,6 +181,7 @@ function ListeningAnimation() {
           ))}
         </div>
       </div>
+
     </div>
   );
 }
@@ -205,9 +200,14 @@ export default function App() {
   }
 
   return (
-    <main className={`chronicle-app ${listening ? "is-listening" : ""}`}>
+    <main
+      className={`chronicle-app ${
+        listening ? "is-listening" : ""
+      }`}
+    >
 
       <style>{`
+
         .chronicle-app .findora-animation {
           width: 100%;
           display: flex;
@@ -218,56 +218,58 @@ export default function App() {
         }
 
         .chronicle-app .findora-visualizer {
-          width: min(76vw, 330px);
+          width: min(76vw, 260px);
           height: auto;
           overflow: visible;
         }
 
-        .spectrum-spin {
+        .findora-particle {
+          transform-box: view-box;
           transform-origin: 160px 160px;
-          animation: spectrumRotate 22s linear infinite;
+          animation: findoraParticle
+            0.75s ease-in-out infinite alternate;
         }
 
-        @keyframes spectrumRotate {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
+        @keyframes findoraParticle {
+          0% {
+            opacity: 0.35;
+            stroke-width: 0.8px;
+          }
+
+          100% {
+            opacity: 1;
+            stroke-width: 2.2px;
+          }
         }
 
-        .outer-red-ring {
-          animation: outerRingRotate 5s linear infinite;
+        .findora-base-ring {
+          animation: findoraRingPulse
+            1.8s ease-in-out infinite;
           transform-origin: 160px 160px;
         }
 
-        .inner-red-ring {
-          animation: innerRingRotate 3s linear infinite;
+        @keyframes findoraRingPulse {
+          0%, 100% {
+            opacity: 0.55;
+            stroke-width: 1.5px;
+          }
+
+          50% {
+            opacity: 1;
+            stroke-width: 2.5px;
+          }
+        }
+
+        .findora-energy {
           transform-origin: 160px 160px;
+          animation: findoraEnergyRotate
+            9s linear infinite;
         }
 
-        @keyframes outerRingRotate {
-          to { transform: rotate(360deg); }
-        }
-
-        @keyframes innerRingRotate {
-          to { transform: rotate(-360deg); }
-        }
-
-        .centre-pulse {
-          transform-origin: 160px 160px;
-          animation: centrePulse 2s ease-in-out infinite;
-        }
-
-        @keyframes centrePulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.025); }
-        }
-
-        .centre-wave {
-          animation: waveGlow 1.5s ease-in-out infinite alternate;
-        }
-
-        @keyframes waveGlow {
-          from { opacity: 0.7; }
-          to { opacity: 1; }
+        @keyframes findoraEnergyRotate {
+          to {
+            transform: rotate(360deg);
+          }
         }
 
         .chronicle-app .findora-listening-text {
@@ -301,25 +303,30 @@ export default function App() {
         .bottom-audio-bars span {
           width: 3px;
           border-radius: 5px;
-          background: white;
-          animation: bottomBarPulse 0.7s ease-in-out infinite alternate;
+          background: #ff315e;
+          animation: bottomBarPulse
+            0.7s ease-in-out infinite alternate;
         }
 
         @keyframes bottomBarPulse {
-          from { transform: scaleY(0.4); }
-          to { transform: scaleY(1); }
+          from {
+            transform: scaleY(0.4);
+          }
+
+          to {
+            transform: scaleY(1);
+          }
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .spectrum-spin,
-          .outer-red-ring,
-          .inner-red-ring,
-          .centre-pulse,
-          .centre-wave,
+          .findora-particle,
+          .findora-base-ring,
+          .findora-energy,
           .bottom-audio-bars span {
             animation-duration: 8s;
           }
         }
+
       `}</style>
 
       <header className="chronicle-header">
@@ -345,11 +352,18 @@ export default function App() {
 
           <footer className="ask-bar">
             <button className="plus-button">+</button>
-            <span className="ask-placeholder">Ask Chronicle</span>
+
+            <span className="ask-placeholder">
+              Ask Chronicle
+            </span>
+
             <button className="small-tool">☺</button>
             <button className="small-tool">🎙</button>
 
-            <button className="voice-button" onClick={handleVoiceClick}>
+            <button
+              className="voice-button"
+              onClick={handleVoiceClick}
+            >
               <MiniWave />
               Voice
             </button>
