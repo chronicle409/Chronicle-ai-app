@@ -50,26 +50,19 @@ function MiniWave() {
 }
 
 function ListeningAnimation() {
-  const particles = Array.from({ length: 240 }, (_, i) => {
-    const angle = (i * 360) / 240;
+  const bars = Array.from({ length: 180 }, (_, i) => {
+    const angle = (i * 360) / 180;
 
-    const variation =
-      Math.sin(i * 0.41) * 3 +
-      Math.cos(i * 0.17) * 2 +
-      Math.sin(i * 0.09) * 2;
-
-    const radius = 88 + variation;
-
-    const length =
-      2 +
-      Math.abs(Math.sin(i * 0.31)) * 5 +
-      Math.abs(Math.cos(i * 0.13)) * 3;
+    const height =
+      3 +
+      Math.abs(Math.sin(i * 0.37)) * 7 +
+      Math.abs(Math.cos(i * 0.19)) * 4;
 
     return {
       angle,
-      radius,
-      length,
-      delay: `${(i % 30) * -0.07}s`
+      height,
+      delay: `${(i % 30) * -0.08}s`,
+      width: i % 5 === 0 ? 1.8 : 1.2
     };
   });
 
@@ -81,21 +74,26 @@ function ListeningAnimation() {
         viewBox="0 0 320 320"
       >
         <defs>
+
+          {/* Red neon spectrum gradient */}
+
           <linearGradient
-            id="findoraRedGradient"
+            id="findoraSpectrum"
             x1="0%"
             y1="0%"
             x2="100%"
             y2="100%"
           >
             <stop offset="0%" stopColor="#ff1744" />
-            <stop offset="30%" stopColor="#ff6688" />
-            <stop offset="55%" stopColor="#ed174c" />
-            <stop offset="80%" stopColor="#a90035" />
+            <stop offset="25%" stopColor="#ff527c" />
+            <stop offset="50%" stopColor="#ed174c" />
+            <stop offset="75%" stopColor="#a00036" />
             <stop offset="100%" stopColor="#ff315e" />
           </linearGradient>
 
-          <filter id="findoraGlow">
+          {/* Neon glow */}
+
+          <filter id="findoraSpectrumGlow">
             <feGaussianBlur
               stdDeviation="2.5"
               result="blur"
@@ -105,61 +103,64 @@ function ListeningAnimation() {
               <feMergeNode in="SourceGraphic" />
             </feMerge>
           </filter>
+
         </defs>
 
-        {/* Circular particle spectrum */}
+        {/* Circular rotating audio spectrum */}
 
-        <g filter="url(#findoraGlow)">
-          {particles.map((p, i) => (
+        <g
+          className="findora-spectrum-spin"
+          filter="url(#findoraSpectrumGlow)"
+        >
+          {bars.map((bar, i) => (
             <line
               key={i}
-              className="findora-particle"
+              className="findora-spectrum-bar"
               x1="160"
-              y1={160 - p.radius}
+              y1="68"
               x2="160"
-              y2={160 - p.radius - p.length}
-              transform={`rotate(${p.angle} 160 160)`}
-              stroke="url(#findoraRedGradient)"
-              strokeWidth={i % 4 === 0 ? 1.7 : 1.1}
+              y2={68 - bar.height}
+              transform={`rotate(${bar.angle} 160 160)`}
+              stroke="url(#findoraSpectrum)"
+              strokeWidth={bar.width}
               strokeLinecap="round"
               style={{
-                animationDelay: p.delay
+                animationDelay: bar.delay
               }}
             />
           ))}
         </g>
 
-        {/* Fine glowing circular line */}
+        {/* Fine circular neon outline */}
 
         <circle
           cx="160"
           cy="160"
-          r="88"
+          r="92"
           fill="none"
           stroke="#ed174c"
-          strokeWidth="1"
-          opacity="0.7"
-          filter="url(#findoraGlow)"
-          className="findora-base-ring"
+          strokeWidth="0.8"
+          opacity="0.5"
+          className="findora-outline"
         />
 
-        {/* Rotating energy particles */}
+        {/* Small glowing particles */}
 
-        <g className="findora-energy">
-          {Array.from({ length: 48 }, (_, i) => (
+        <g className="findora-orbit-particles">
+          {Array.from({ length: 36 }, (_, i) => (
             <circle
               key={i}
               cx="160"
-              cy="72"
-              r={i % 4 === 0 ? 1.7 : 1}
-              fill="#ff315e"
-              opacity="0.95"
-              transform={`rotate(${i * 7.5} 160 160)`}
+              cy="67"
+              r={i % 3 === 0 ? 1.5 : 0.8}
+              fill="#ff527c"
+              opacity="0.9"
+              transform={`rotate(${i * 10} 160 160)`}
             />
           ))}
         </g>
 
-        {/* YOUR ORIGINAL WHITE OVAL LOGO */}
+        {/* Original white oval logo */}
 
         <ellipse
           cx="160"
@@ -169,7 +170,7 @@ function ListeningAnimation() {
           fill="#ffffff"
         />
 
-        {/* YOUR ORIGINAL RED WAVEFORM */}
+        {/* Original pink waveform */}
 
         <path
           d="
@@ -192,7 +193,7 @@ function ListeningAnimation() {
           strokeWidth="3"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="findora-logo-wave"
+          className="findora-centre-wave"
         />
 
       </svg>
@@ -260,19 +261,33 @@ export default function App() {
           overflow: visible;
         }
 
-        /* PARTICLE MOVEMENT */
+        /* Rotating circular spectrum */
 
-        .findora-particle {
-          transform-box: view-box;
+        .findora-spectrum-spin {
           transform-origin: 160px 160px;
-          animation: findoraParticle
+          animation: findoraSpectrumRotate 18s linear infinite;
+        }
+
+        @keyframes findoraSpectrumRotate {
+          from {
+            transform: rotate(0deg);
+          }
+
+          to {
+            transform: rotate(360deg);
+          }
+        }
+
+        /* Individual glowing audio bars */
+
+        .findora-spectrum-bar {
+          animation: findoraBarPulse
             0.65s ease-in-out infinite alternate;
         }
 
-        @keyframes findoraParticle {
+        @keyframes findoraBarPulse {
           0% {
             opacity: 0.35;
-            stroke-width: 0.8px;
           }
 
           50% {
@@ -281,52 +296,51 @@ export default function App() {
 
           100% {
             opacity: 1;
-            stroke-width: 2px;
           }
         }
 
-        /* CIRCULAR RING */
+        /* Outer neon circle */
 
-        .findora-base-ring {
+        .findora-outline {
           transform-origin: 160px 160px;
-          animation: findoraRingPulse
-            1.5s ease-in-out infinite;
+          animation: findoraOutlinePulse
+            2s ease-in-out infinite;
         }
 
-        @keyframes findoraRingPulse {
+        @keyframes findoraOutlinePulse {
           0%, 100% {
-            opacity: 0.45;
+            opacity: 0.3;
           }
 
           50% {
-            opacity: 1;
+            opacity: 0.9;
           }
         }
 
-        /* ROTATING PARTICLES */
+        /* Orbiting particles */
 
-        .findora-energy {
+        .findora-orbit-particles {
           transform-origin: 160px 160px;
-          animation: findoraEnergyRotate
-            12s linear infinite;
+          animation: findoraOrbit
+            10s linear infinite;
         }
 
-        @keyframes findoraEnergyRotate {
+        @keyframes findoraOrbit {
           to {
             transform: rotate(360deg);
           }
         }
 
-        /* LOGO WAVEFORM */
+        /* Original logo waveform */
 
-        .findora-logo-wave {
-          animation: logoWaveGlow
-            1.2s ease-in-out infinite alternate;
+        .findora-centre-wave {
+          animation: findoraWaveGlow
+            1.3s ease-in-out infinite alternate;
         }
 
-        @keyframes logoWaveGlow {
+        @keyframes findoraWaveGlow {
           from {
-            opacity: 0.65;
+            opacity: 0.7;
           }
 
           to {
@@ -381,10 +395,11 @@ export default function App() {
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .findora-particle,
-          .findora-base-ring,
-          .findora-energy,
-          .findora-logo-wave,
+          .findora-spectrum-spin,
+          .findora-spectrum-bar,
+          .findora-outline,
+          .findora-orbit-particles,
+          .findora-centre-wave,
           .bottom-audio-bars span {
             animation-duration: 8s;
           }
