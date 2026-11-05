@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import "./App.css";
 
 let findoraAudio = null;
@@ -49,154 +49,215 @@ function MiniWave() {
   );
 }
 
-function ListeningAnimation() {
-  const bars = Array.from({ length: 180 }, (_, i) => {
-    const angle = (i * 360) / 180;
+/* REAL MICROPHONE-REACTIVE CIRCULAR VISUALIZER */
 
-    const height =
-      3 +
-      Math.abs(Math.sin(i * 0.37)) * 7 +
-      Math.abs(Math.cos(i * 0.19)) * 4;
+function ListeningAnimation({ stream }) {
+  const canvasRef = useRef(null);
 
-    return {
-      angle,
-      height,
-      delay: `${(i % 30) * -0.08}s`,
-      width: i % 5 === 0 ? 1.8 : 1.2
+  useEffect(() => {
+    if (!stream || !canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+
+    const AudioContextClass =
+      window.AudioContext || window.webkitAudioContext;
+
+    if (!AudioContextClass) return;
+
+    const audioContext = new AudioContextClass();
+    const analyser = audioContext.createAnalyser();
+
+    analyser.fftSize = 512;
+    analyser.smoothingTimeConstant = 0.78;
+
+    const microphone =
+      audioContext.createMediaStreamSource(stream);
+
+    microphone.connect(analyser);
+
+    const frequencyData = new Uint8Array(
+      analyser.frequencyBinCount
+    );
+
+    let animationFrame;
+    let smoothValues = new Array(180).fill(0);
+
+    const center = 160;
+    const baseRadius = 91;
+    const barCount = 180;
+
+    function draw() {
+      animationFrame = requestAnimationFrame(draw);
+
+      analyser.getByteFrequencyData(frequencyData);
+
+      ctx.clearRect(0, 0, 320, 320);
+
+      /* Subtle circular glow */
+
+      const glow = ctx.createRadialGradient(
+        center, center, 65,
+        center, center, 125
+      );
+
+      glow.addColorStop(0, "rgba(237,23,76,0)");
+      glow.addColorStop(0.75, "rgba(237,23,76,0.035)");
+      glow.addColorStop(1, "rgba(237,23,76,0)");
+
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, 320, 320);
+
+      /* Circular audio spectrum */
+
+      for (let i = 0; i < barCount; i++) {
+        const angle =
+          (i / barCount) * Math.PI * 2 -
+          Math.PI / 2;
+
+        const dataIndex = Math.floor(
+          (i / barCount) * frequencyData.length * 0.75
+        );
+
+        const volume = frequencyData[dataIndex] / 255;
+
+        /* Smooth movement */
+
+        smoothValues[i] +=
+          (volume - smoothValues[i]) * 0.22;
+
+        const amplitude = smoothValues[i];
+
+        const variation =
+          2 +
+          Math.sin(i * 0.31) * 1.5;
+
+        const barLength =
+          variation + amplitude * 27;
+
+        const innerRadius = baseRadius;
+        const outerRadius = baseRadius + barLength;
+
+        const x1 =
+          center + Math.cos(angle) * innerRadius;
+
+        const y1 =
+          center + Math.sin(angle) * innerRadius;
+
+        const x2 =
+          center + Math.cos(angle) * outerRadius;
+
+        const y2 =
+          center + Math.sin(angle) * outerRadius;
+
+        /* Different red shades around the circle */
+
+        const hue =
+          345 + Math.sin(i * 0.035) * 13;
+
+        const saturation =
+          90 + amplitude * 10;
+
+        const lightness =
+          38 + amplitude * 25;
+
+        ctx.beginPath();
+
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+
+        ctx.strokeStyle =
+          `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+
+        ctx.lineWidth = i % 4 === 0 ? 1.8 : 1.2;
+        ctx.lineCap = "round";
+
+        ctx.shadowColor = "#ff174c";
+        ctx.shadowBlur = amplitude > 0.08 ? 8 : 3;
+
+        ctx.stroke();
+      }
+
+      ctx.shadowBlur = 0;
+
+      /* Fine outer circular line */
+
+      ctx.beginPath();
+      ctx.arc(center, center, baseRadius, 0, Math.PI * 2);
+
+      ctx.strokeStyle = "rgba(255,40,90,0.45)";
+      ctx.lineWidth = 0.7;
+      ctx.stroke();
+    }
+
+    if (audioContext.state === "suspended") {
+      audioContext.resume();
+    }
+
+    draw();
+
+    return () => {
+      cancelAnimationFrame(animationFrame);
+      microphone.disconnect();
+      audioContext.close();
     };
-  });
+  }, [stream]);
 
   return (
     <div className="findora-animation">
 
-      <svg
-        className="findora-visualizer"
-        viewBox="0 0 320 320"
-      >
-        <defs>
+      <div className="findora-visualizer-stage">
 
-          {/* Red neon spectrum gradient */}
+        {/* Animated spectrum */}
 
-          <linearGradient
-            id="findoraSpectrum"
-            x1="0%"
-            y1="0%"
-            x2="100%"
-            y2="100%"
-          >
-            <stop offset="0%" stopColor="#ff1744" />
-            <stop offset="25%" stopColor="#ff527c" />
-            <stop offset="50%" stopColor="#ed174c" />
-            <stop offset="75%" stopColor="#a00036" />
-            <stop offset="100%" stopColor="#ff315e" />
-          </linearGradient>
+        <canvas
+          ref={canvasRef}
+          width="320"
+          height="320"
+          className="findora-spectrum-canvas"
+        />
 
-          {/* Neon glow */}
+        {/* YOUR ORIGINAL WHITE OVAL LOGO */}
 
-          <filter id="findoraSpectrumGlow">
-            <feGaussianBlur
-              stdDeviation="2.5"
-              result="blur"
-            />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-
-        </defs>
-
-        {/* Circular rotating audio spectrum */}
-
-        <g
-          className="findora-spectrum-spin"
-          filter="url(#findoraSpectrumGlow)"
+        <svg
+          className="findora-logo-overlay"
+          viewBox="0 0 320 320"
         >
-          {bars.map((bar, i) => (
-            <line
-              key={i}
-              className="findora-spectrum-bar"
-              x1="160"
-              y1="68"
-              x2="160"
-              y2={68 - bar.height}
-              transform={`rotate(${bar.angle} 160 160)`}
-              stroke="url(#findoraSpectrum)"
-              strokeWidth={bar.width}
-              strokeLinecap="round"
-              style={{
-                animationDelay: bar.delay
-              }}
-            />
-          ))}
-        </g>
+          <ellipse
+            cx="160"
+            cy="160"
+            rx="70"
+            ry="54"
+            fill="#ffffff"
+          />
 
-        {/* Fine circular neon outline */}
+          {/* Original pink waveform */}
 
-        <circle
-          cx="160"
-          cy="160"
-          r="92"
-          fill="none"
-          stroke="#ed174c"
-          strokeWidth="0.8"
-          opacity="0.5"
-          className="findora-outline"
-        />
+          <path
+            d="
+              M111 160
+              L122 160
+              L130 155
+              L138 164
+              L146 151
+              L153 175
+              L160 132
+              L168 183
+              L176 145
+              L183 164
+              L190 153
+              L198 160
+              L210 160
+            "
+            fill="none"
+            stroke="#ed174c"
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
 
-        {/* Small glowing particles */}
-
-        <g className="findora-orbit-particles">
-          {Array.from({ length: 36 }, (_, i) => (
-            <circle
-              key={i}
-              cx="160"
-              cy="67"
-              r={i % 3 === 0 ? 1.5 : 0.8}
-              fill="#ff527c"
-              opacity="0.9"
-              transform={`rotate(${i * 10} 160 160)`}
-            />
-          ))}
-        </g>
-
-        {/* Original white oval logo */}
-
-        <ellipse
-          cx="160"
-          cy="160"
-          rx="70"
-          ry="54"
-          fill="#ffffff"
-        />
-
-        {/* Original pink waveform */}
-
-        <path
-          d="
-            M111 160
-            L122 160
-            L130 155
-            L138 164
-            L146 151
-            L153 175
-            L160 132
-            L168 183
-            L176 145
-            L183 164
-            L190 153
-            L198 160
-            L210 160
-          "
-          fill="none"
-          stroke="#ed174c"
-          strokeWidth="3"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="findora-centre-wave"
-        />
-
-      </svg>
+      </div>
 
       <div className="findora-listening-text">
         <h3>Listening for music</h3>
@@ -220,135 +281,39 @@ function ListeningAnimation() {
         </div>
       </div>
 
-    </div>
-  );
-}
-
-export default function App() {
-  const [listening, setListening] = useState(false);
-
-  function handleVoiceClick() {
-    if (listening) {
-      playFindoraSound("off");
-      setListening(false);
-    } else {
-      playFindoraSound("on");
-      setListening(true);
-    }
-  }
-
-  return (
-    <main
-      className={`chronicle-app ${
-        listening ? "is-listening" : ""
-      }`}
-    >
-
       <style>{`
 
-        .chronicle-app .findora-animation {
+        .findora-animation {
           width: 100%;
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding-top: 5px;
         }
 
-        .chronicle-app .findora-visualizer {
+        .findora-visualizer-stage {
+          position: relative;
           width: min(76vw, 300px);
-          height: auto;
+          aspect-ratio: 1;
+        }
+
+        .findora-spectrum-canvas,
+        .findora-logo-overlay {
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+        }
+
+        .findora-spectrum-canvas {
           overflow: visible;
         }
 
-        /* Rotating circular spectrum */
-
-        .findora-spectrum-spin {
-          transform-origin: 160px 160px;
-          animation: findoraSpectrumRotate 18s linear infinite;
+        .findora-logo-overlay {
+          pointer-events: none;
         }
 
-        @keyframes findoraSpectrumRotate {
-          from {
-            transform: rotate(0deg);
-          }
-
-          to {
-            transform: rotate(360deg);
-          }
-        }
-
-        /* Individual glowing audio bars */
-
-        .findora-spectrum-bar {
-          animation: findoraBarPulse
-            0.65s ease-in-out infinite alternate;
-        }
-
-        @keyframes findoraBarPulse {
-          0% {
-            opacity: 0.35;
-          }
-
-          50% {
-            opacity: 0.75;
-          }
-
-          100% {
-            opacity: 1;
-          }
-        }
-
-        /* Outer neon circle */
-
-        .findora-outline {
-          transform-origin: 160px 160px;
-          animation: findoraOutlinePulse
-            2s ease-in-out infinite;
-        }
-
-        @keyframes findoraOutlinePulse {
-          0%, 100% {
-            opacity: 0.3;
-          }
-
-          50% {
-            opacity: 0.9;
-          }
-        }
-
-        /* Orbiting particles */
-
-        .findora-orbit-particles {
-          transform-origin: 160px 160px;
-          animation: findoraOrbit
-            10s linear infinite;
-        }
-
-        @keyframes findoraOrbit {
-          to {
-            transform: rotate(360deg);
-          }
-        }
-
-        /* Original logo waveform */
-
-        .findora-centre-wave {
-          animation: findoraWaveGlow
-            1.3s ease-in-out infinite alternate;
-        }
-
-        @keyframes findoraWaveGlow {
-          from {
-            opacity: 0.7;
-          }
-
-          to {
-            opacity: 1;
-          }
-        }
-
-        .chronicle-app .findora-listening-text {
+        .findora-listening-text {
           color: white;
           text-align: center;
           margin-top: 0;
@@ -385,27 +350,61 @@ export default function App() {
         }
 
         @keyframes bottomBarPulse {
-          from {
-            transform: scaleY(0.4);
-          }
-
-          to {
-            transform: scaleY(1);
-          }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .findora-spectrum-spin,
-          .findora-spectrum-bar,
-          .findora-outline,
-          .findora-orbit-particles,
-          .findora-centre-wave,
-          .bottom-audio-bars span {
-            animation-duration: 8s;
-          }
+          from { transform: scaleY(0.4); }
+          to { transform: scaleY(1); }
         }
 
       `}</style>
+
+    </div>
+  );
+}
+
+export default function App() {
+  const [listening, setListening] = useState(false);
+  const [micStream, setMicStream] = useState(null);
+
+  async function handleVoiceClick() {
+    if (listening) {
+      if (micStream) {
+        micStream.getTracks().forEach(track => track.stop());
+      }
+
+      setMicStream(null);
+      setListening(false);
+      playFindoraSound("off");
+      return;
+    }
+
+    try {
+      const stream =
+        await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false
+          }
+        });
+
+      setMicStream(stream);
+      setListening(true);
+      playFindoraSound("on");
+
+    } catch (error) {
+      console.error("Microphone error:", error);
+
+      alert(
+        "Please allow microphone access to use Chronicle listening animation."
+      );
+    }
+  }
+
+  return (
+    <main
+      className={`chronicle-app ${
+        listening ? "is-listening" : ""
+      }`}
+    >
 
       <header className="chronicle-header">
         <button className="header-button">☰</button>
@@ -414,7 +413,7 @@ export default function App() {
 
       <section className="visualizer-container">
         {listening ? (
-          <ListeningAnimation />
+          <ListeningAnimation stream={micStream} />
         ) : (
           <ChronicleLogo />
         )}
