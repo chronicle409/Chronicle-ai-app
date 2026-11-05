@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from "react";
 import "./App.css";
 
@@ -15,6 +16,8 @@ function playFindoraSound(type = "on") {
   }
 
   findoraAudio = new Audio(file);
+  findoraAudio.volume = 1;
+
   findoraAudio.play().catch((error) => {
     console.error("FINDORA sound error:", error);
   });
@@ -31,24 +34,33 @@ function ChronicleLogo() {
         role="img"
         aria-label="Chronicle waveform logo"
       >
-        <ellipse
-          cx="160"
-          cy="160"
-          rx="70"
-          ry="54"
-          fill="white"
-        />
+        <circle cx="160" cy="160" r="70" fill="white" />
 
         <path
           d="M111 160 L122 160 L130 155 L138 164 L146 151 L153 175 L160 132 L168 183 L176 145 L183 164 L190 153 L198 160 L210 160"
           fill="none"
           stroke="#ed174c"
-          strokeWidth="3"
+          strokeWidth="5"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
       </svg>
     </div>
+  );
+}
+
+function DetectiveIcon() {
+  return (
+    <svg viewBox="0 0 64 64" className="detective-icon"
+      fill="none" stroke="white" strokeWidth="2.5"
+      strokeLinecap="round" strokeLinejoin="round"
+      aria-label="Chronicle">
+      <path d="M12 27 L17 23 L21 11 L30 15 L36 10 L44 15 L47 24 L53 27 L55 34 L9 34 Z" />
+      <path d="M14 34 L50 34" />
+      <circle cx="22" cy="44" r="8" />
+      <circle cx="42" cy="44" r="8" />
+      <path d="M30 43 L34 43 M14 43 L8 39 M50 43 L56 39 M29 24 L38 24" />
+    </svg>
   );
 }
 
@@ -107,18 +119,13 @@ function ListeningAnimation({ stream }) {
       if (!active) return;
 
       animationFrame = requestAnimationFrame(draw);
-
       analyser.getByteFrequencyData(frequencyData);
 
       ctx.clearRect(0, 0, 320, 320);
 
       const glow = ctx.createRadialGradient(
-        center,
-        center,
-        65,
-        center,
-        center,
-        145
+        center, center, 65,
+        center, center, 145
       );
 
       glow.addColorStop(0, "rgba(237,23,76,0)");
@@ -142,19 +149,16 @@ function ListeningAnimation({ stream }) {
           (volume - smoothValues[i]) * 0.22;
 
         const amplitude = smoothValues[i];
-
         const variation = 2 + Math.sin(i * 0.31) * 1.5;
         const barLength = variation + amplitude * 27;
 
         const x1 =
           center + Math.cos(angle) * baseRadius;
-
         const y1 =
           center + Math.sin(angle) * baseRadius;
 
         const x2 =
           center + Math.cos(angle) * (baseRadius + barLength);
-
         const y2 =
           center + Math.sin(angle) * (baseRadius + barLength);
 
@@ -212,24 +216,13 @@ function ListeningAnimation({ stream }) {
           className="visualizer-canvas"
         />
 
-        <svg
-          className="findora-logo"
-          viewBox="0 0 320 320"
-          aria-label="Findora waveform logo"
-        >
-          <ellipse
-            cx="160"
-            cy="160"
-            rx="70"
-            ry="54"
-            fill="white"
-          />
-
+        <svg className="findora-logo" viewBox="0 0 320 320">
+          <circle cx="160" cy="160" r="70" fill="white" />
           <path
             d="M111 160 L122 160 L130 155 L138 164 L146 151 L153 175 L160 132 L168 183 L176 145 L183 164 L190 153 L198 160 L210 160"
             fill="none"
             stroke="#ed174c"
-            strokeWidth="3"
+            strokeWidth="5"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
@@ -238,11 +231,7 @@ function ListeningAnimation({ stream }) {
 
       <div className="listening-info">
         <h2>Listening for music</h2>
-        <p>
-          Make sure your device can hear the song
-          <br />
-          clearly
-        </p>
+        <p>Make sure your device can hear the song clearly</p>
 
         <div className="small-bars">
           {[8, 14, 20, 12, 17].map((height, index) => (
@@ -264,6 +253,10 @@ export default function App() {
   const [listening, setListening] = useState(false);
   const [micStream, setMicStream] = useState(null);
   const [message, setMessage] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [attachedFile, setAttachedFile] = useState(null);
+
+  const fileInputRef = useRef(null);
 
   async function handleVoiceClick() {
     if (listening) {
@@ -278,6 +271,10 @@ export default function App() {
     }
 
     try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error("Microphone access is unavailable.");
+      }
+
       const stream =
         await navigator.mediaDevices.getUserMedia({
           audio: {
@@ -299,50 +296,118 @@ export default function App() {
     }
   }
 
+  useEffect(() => {
+    return () => {
+      if (micStream) {
+        micStream.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, [micStream]);
+
+  function stopListening() {
+    if (micStream) {
+      micStream.getTracks().forEach((track) => track.stop());
+    }
+
+    setMicStream(null);
+    setListening(false);
+    playFindoraSound("off");
+  }
+
+  function chooseShortcut(text) {
+    setMessage(text);
+  }
+
+  function addEmoji() {
+    setMessage((previous) => previous + "🙂");
+  }
+
   return (
     <main className={`chronicle-app ${listening ? "is-listening" : ""}`}>
+
       <header className="chronicle-header">
-        <button className="header-button menu-button" aria-label="Menu">
-          ☰
+        <button
+          className="header-button menu-button"
+          onClick={() => setMenuOpen(!menuOpen)}
+          aria-label="Open menu"
+        >
+          <span />
+          <span />
+          <span />
         </button>
 
-        <div className="header-brand">FINDORA</div>
-
-        <button className="header-button phone-button" aria-label="Phone">
-          ♧
-        </button>
+        <div className="header-mark">
+          <DetectiveIcon />
+        </div>
       </header>
+
+      {menuOpen && (
+        <div className="menu-panel">
+          <strong>CHRONICLE</strong>
+          <button onClick={() => setMenuOpen(false)}>Home</button>
+          <button onClick={() => setMenuOpen(false)}>Close menu</button>
+        </div>
+      )}
 
       {!listening ? (
         <>
           <section className="home-center">
             <ChronicleLogo />
-
-            <h1>Find your music</h1>
-            <p className="home-subtitle">
-              Discover songs from videos and sounds
-            </p>
           </section>
 
-          <section className="home-actions">
-            <button className="action-card">
-              <span className="action-icon pink-icon">♫</span>
-              <span>Find a song</span>
+          <section className="quick-actions">
+            <button
+              className="quick-action"
+              onClick={() => chooseShortcut("Create an image")}
+            >
+              <svg viewBox="0 0 32 32" aria-hidden="true">
+                <rect x="3" y="4" width="26" height="24" rx="3" />
+                <circle cx="21" cy="11" r="3" />
+                <path d="M4 24 L12 15 L19 22 L23 18 L29 25" />
+              </svg>
+              <span>Create an image</span>
             </button>
 
-            <button className="action-card">
-              <span className="action-icon red-icon">▣</span>
-              <span>Search a video</span>
+            <button
+              className="quick-action"
+              onClick={() => chooseShortcut("Translate language")}
+            >
+              <svg viewBox="0 0 32 32" aria-hidden="true">
+                <path d="M3 4 H22 V19 H14 L8 25 V19 H3 Z" />
+                <path d="M12 11 H26 V22 H22 V28 L16 22 H12" />
+                <path d="M8 9 H17 M12 7 V9 M10 12 Q12 16 17 17" />
+              </svg>
+              <span>Translate language</span>
             </button>
 
-            <button className="action-card">
-              <span className="action-icon light-icon">✧</span>
-              <span>Explore music</span>
+            <button
+              className="quick-action"
+              onClick={() => chooseShortcut("Search the web")}
+            >
+              <svg viewBox="0 0 32 32" aria-hidden="true">
+                <circle cx="16" cy="16" r="13" />
+                <path d="M3 16 H29 M16 3 C8 10 8 22 16 29 M16 3 C24 10 24 22 16 29" />
+              </svg>
+              <span>Search the web</span>
             </button>
           </section>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden-file-input"
+            onChange={(event) =>
+              setAttachedFile(event.target.files?.[0] || null)
+            }
+          />
 
           <footer className="ask-bar">
-            <button className="plus-button" aria-label="Add">
+            <button
+              className="plus-button"
+              aria-label="Add image"
+              onClick={() => fileInputRef.current?.click()}
+            >
               +
             </button>
 
@@ -350,20 +415,31 @@ export default function App() {
               className="ask-input"
               value={message}
               onChange={(event) => setMessage(event.target.value)}
-              placeholder="Ask Chronicle..."
+              placeholder={
+                attachedFile
+                  ? attachedFile.name
+                  : "Ask Chronicle"
+              }
               aria-label="Message"
             />
 
-            <button className="small-tool" aria-label="Emoji">
+            <button
+              className="small-tool emoji-button"
+              aria-label="Add emoji"
+              onClick={addEmoji}
+            >
               ☺
             </button>
 
             <button
-              className="small-tool"
+              className="small-tool mic-button"
               onClick={handleVoiceClick}
               aria-label="Start microphone"
             >
-              🎙
+              <svg viewBox="0 0 24 24">
+                <rect x="9" y="2" width="6" height="13" rx="3" />
+                <path d="M5 11 V13 A7 7 0 0 0 19 13 V11 M12 20 V23 M8 23 H16" />
+              </svg>
             </button>
 
             <button
@@ -384,7 +460,7 @@ export default function App() {
           <section className="listening-controls">
             <button
               className="stop-button"
-              onClick={handleVoiceClick}
+              onClick={stopListening}
             >
               Stop listening
             </button>
