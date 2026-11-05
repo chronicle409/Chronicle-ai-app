@@ -1,3 +1,4 @@
+
 * {
   box-sizing: border-box;
 }
@@ -29,73 +30,113 @@ button {
   width: 100%;
   min-height: 100vh;
   min-height: 100dvh;
-  background: #000;
-  color: #fff;
   position: relative;
   overflow: hidden;
+  background: #000;
+  color: #fff;
   display: flex;
   flex-direction: column;
 }
 
-/* HEADER */
+/* TOP HEADER */
 
 .chronicle-header {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 75px;
-  padding: 0 22px;
+  height: 110px;
+  padding: 25px 27px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  z-index: 5;
+  z-index: 10;
 }
 
 .header-button {
-  width: 42px;
-  height: 42px;
   border: 0;
   background: transparent;
   color: white;
-  font-size: 29px;
+}
+
+.menu-button {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  padding: 3px;
+}
+
+.menu-button span {
+  display: block;
+  width: 36px;
+  height: 3px;
+  border-radius: 5px;
+  background: white;
+  box-shadow: 0 0 3px rgba(255,255,255,0.4);
+}
+
+.header-mark {
+  width: 45px;
+  height: 45px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.detective-icon {
+  width: 45px;
+  height: 45px;
+}
+
+/* MENU */
+
+.menu-panel {
+  position: absolute;
+  top: 90px;
+  left: 22px;
+  z-index: 20;
+  width: 190px;
+  padding: 18px;
+  border: 1px solid #292329;
+  border-radius: 15px;
+  background: #100c0e;
+  box-shadow: 0 8px 30px rgba(237,23,76,0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.menu-panel strong {
+  font-size: 13px;
+  letter-spacing: 3px;
+}
+
+.menu-panel button {
+  border: 0;
+  background: transparent;
+  color: white;
+  text-align: left;
+  font-size: 14px;
+}
+
+/* CENTER LOGO */
+
+.home-center {
+  position: absolute;
+  top: 28%;
+  left: 0;
+  right: 0;
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
-.menu-button {
-  font-size: 28px;
-}
-
-.phone-button {
-  font-size: 28px;
-  transform: rotate(-25deg);
-}
-
-.header-brand {
-  font-size: 17px;
-  font-weight: 800;
-  letter-spacing: 4px;
-  color: #fff;
-}
-
-/* HOME DISPLAY */
-
-.home-center {
-  position: absolute;
-  top: 17%;
-  left: 0;
-  right: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-}
-
 .logo-stage {
   position: relative;
-  width: min(65vw, 260px);
+  width: min(56vw, 210px);
   aspect-ratio: 1;
   display: flex;
   justify-content: center;
@@ -103,12 +144,7 @@ button {
 }
 
 .logo-glow {
-  position: absolute;
-  width: 70%;
-  height: 70%;
-  border-radius: 50%;
-  background: rgba(237, 23, 76, 0.12);
-  filter: blur(35px);
+  display: none;
 }
 
 .main-logo {
@@ -117,134 +153,150 @@ button {
   height: 100%;
 }
 
-.home-center h1 {
-  font-size: 23px;
-  font-weight: 700;
-  margin: 8px 0;
-}
+/* BOTTOM SHORTCUTS */
 
-.home-subtitle {
-  color: #aaa;
-  font-size: 13px;
-  margin: 0;
-}
-
-/* QUICK ACTIONS */
-
-.home-actions {
+.quick-actions {
   position: absolute;
-  left: 20px;
-  right: 20px;
-  bottom: 125px;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-}
-
-.action-card {
-  min-height: 95px;
-  border: 1px solid #292027;
-  border-radius: 17px;
-  background: #10090c;
-  color: #fff;
+  left: 10%;
+  right: 10%;
+  bottom: 145px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  align-items: center;
   gap: 12px;
-  font-size: 11px;
-  transition: background 0.2s ease;
 }
 
-.action-card:active {
-  background: #241018;
+.quick-action {
+  width: 100%;
+  min-height: 52px;
+  padding: 3px 0;
+  border: 0;
+  background: transparent;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 25px;
+  text-align: left;
+  font-size: 17px;
+  font-weight: 400;
 }
 
-.action-icon {
-  font-size: 25px;
+.quick-action svg {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: white;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
-.pink-icon {
-  color: #ff4775;
+.quick-action:active {
+  opacity: 0.65;
 }
 
-.red-icon {
-  color: #ed174c;
-}
-
-.light-icon {
-  color: #ff9bb5;
-}
-
-/* CHAT INPUT */
+/* BOTTOM CHAT INPUT */
 
 .ask-bar {
   position: absolute;
-  bottom: 25px;
-  left: 15px;
-  right: 15px;
-  min-height: 62px;
-  padding: 7px;
-  border: 1px solid #38202a;
-  border-radius: 35px;
-  background: #100c0e;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 42px);
+  max-width: 560px;
+  min-height: 76px;
+  padding: 7px 10px;
+  border: 1px solid #171717;
+  border-radius: 50px;
+  background: #111;
   display: flex;
   align-items: center;
-  gap: 7px;
-  box-shadow: 0 0 20px rgba(237, 23, 76, 0.07);
+  gap: 8px;
+  box-shadow: 0 0 15px rgba(255,255,255,0.035);
 }
 
 .plus-button {
-  width: 38px;
-  height: 38px;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
   border: 0;
   border-radius: 50%;
-  background: #251018;
-  color: #ff4775;
-  font-size: 27px;
+  background: transparent;
+  color: white;
+  font-size: 37px;
+  font-weight: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .ask-input {
-  min-width: 0;
   flex: 1;
+  min-width: 0;
+  width: 100%;
   border: 0;
   outline: none;
   background: transparent;
   color: white;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .ask-input::placeholder {
-  color: #999;
+  color: #eee;
+  opacity: 1;
 }
 
 .small-tool {
-  width: 30px;
-  height: 35px;
+  width: 35px;
+  height: 42px;
+  flex-shrink: 0;
   border: 0;
   background: transparent;
   color: white;
-  font-size: 19px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.emoji-button {
+  font-size: 27px;
+}
+
+.mic-button svg {
+  width: 28px;
+  height: 28px;
+  fill: none;
+  stroke: white;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .voice-button {
-  height: 43px;
+  height: 60px;
+  min-width: 120px;
   padding: 0 13px;
+  flex-shrink: 0;
   border: 0;
-  border-radius: 25px;
+  border-radius: 40px;
   background: linear-gradient(110deg, #ed174c, #ff4775);
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  font-size: 12px;
+  gap: 7px;
+  font-size: 16px;
   font-weight: 700;
+  box-shadow: 0 0 12px rgba(237,23,76,0.25);
 }
 
 .mini-wave {
-  width: 22px;
-  height: 22px;
+  width: 25px;
+  height: 25px;
+}
+
+.hidden-file-input {
+  display: none;
 }
 
 /* LISTENING DISPLAY */
@@ -359,50 +411,105 @@ button {
   color: white;
   font-size: 18px;
   font-weight: 700;
-  background: linear-gradient(
-    110deg,
-    #ed174c,
-    #ff4775
-  );
-  box-shadow: 0 0 25px rgba(237, 23, 76, 0.25);
+  background: linear-gradient(110deg, #ed174c, #ff4775);
+  box-shadow: 0 0 25px rgba(237,23,76,0.25);
 }
 
 .stop-button:active {
   transform: scale(0.97);
 }
 
-/* SMALL SCREENS */
+/* SMALL PHONES */
 
-@media (max-height: 650px) {
+@media (max-width: 390px) {
+  .chronicle-header {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .quick-actions {
+    left: 9%;
+    right: 8%;
+    bottom: 135px;
+    gap: 8px;
+  }
+
+  .quick-action {
+    min-height: 48px;
+    font-size: 15px;
+    gap: 19px;
+  }
+
+  .quick-action svg {
+    width: 35px;
+    height: 35px;
+  }
+
+  .ask-bar {
+    width: calc(100% - 26px);
+    min-height: 68px;
+    padding: 6px;
+    gap: 4px;
+  }
+
+  .plus-button {
+    width: 36px;
+    font-size: 32px;
+  }
+
+  .ask-input {
+    font-size: 12px;
+  }
+
+  .small-tool {
+    width: 29px;
+  }
+
+  .voice-button {
+    min-width: 103px;
+    height: 52px;
+    padding: 0 9px;
+    font-size: 14px;
+  }
+}
+
+/* SHORT SCREENS */
+
+@media (max-height: 700px) {
   .home-center {
-    top: 10%;
+    top: 23%;
   }
 
   .logo-stage {
-    width: min(48vw, 190px);
+    width: min(45vw, 165px);
   }
 
-  .home-actions {
-    bottom: 105px;
+  .quick-actions {
+    bottom: 115px;
+    gap: 5px;
+  }
+
+  .quick-action {
+    min-height: 43px;
+  }
+
+  .ask-bar {
+    bottom: 12px;
   }
 
   .listening-center {
-    top: 41%;
+    top: 40%;
   }
 
   .visualizer-stage {
     width: min(65vw, 260px);
   }
 
-  .listening-info h2 {
-    font-size: 16px;
-  }
-
   .listening-controls {
-    bottom: 4%;
+    bottom: 3%;
   }
 
   .stop-button {
     min-height: 54px;
   }
-  }
+}
