@@ -6,7 +6,6 @@ function Visualizer({ analyser, listening, onToggle }) {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // Use a standard canvas context for better mobile stability.
     const ctx = canvas.getContext("2d", { alpha: true });
     if (!ctx) return;
 
@@ -20,19 +19,18 @@ function Visualizer({ analyser, listening, onToggle }) {
     let barGroups = [];
 
     const COUNT = 180;
+
     const audioData = analyser
       ? new Uint8Array(analyser.frequencyBinCount)
       : null;
 
-    // Calculate every bar's position only once.
     const bars = Array.from({ length: COUNT }, (_, i) => {
       const angle = (i / COUNT) * Math.PI * 2 - Math.PI / 2;
 
       return {
         x: Math.cos(angle),
         y: Math.sin(angle),
-        phase: angle,
-        audioIndex: i
+        phase: angle
       };
     });
 
@@ -58,9 +56,6 @@ function Visualizer({ analyser, listening, onToggle }) {
 
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      const cx = width / 2;
-      const cy = height / 2;
-
       barGroups = [];
 
       for (let group = 0; group < 6; group++) {
@@ -79,27 +74,30 @@ function Visualizer({ analyser, listening, onToggle }) {
 
     const radius = () => Math.min(width, height) * 0.32;
 
+    // Smooth ring drawing: one clean stroke per ring.
     function drawRing(cx, cy, r, rotation, color) {
-      const start = rotation;
-      const end = rotation + 1.45;
+      ctx.save();
 
-      // Soft outer glow.
       ctx.beginPath();
-      ctx.arc(cx, cy, r, start, end);
-      ctx.globalAlpha = 0.20;
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 12;
-      ctx.lineCap = "round";
-      ctx.stroke();
+      ctx.arc(
+        cx,
+        cy,
+        r,
+        rotation,
+        rotation + 1.45
+      );
 
-      // Sharp inner ring.
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, start, end);
       ctx.globalAlpha = 1;
       ctx.strokeStyle = color;
-      ctx.lineWidth = 5;
+      ctx.lineWidth = 6;
       ctx.lineCap = "round";
+
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = color;
+
       ctx.stroke();
+
+      ctx.restore();
     }
 
     function draw(timestamp) {
@@ -123,21 +121,19 @@ function Visualizer({ analyser, listening, onToggle }) {
 
       if (!width || !height) return;
 
-      // Read microphone data once per frame.
       if (analyser && audioData && listening) {
         analyser.getByteFrequencyData(audioData);
       }
 
       ctx.clearRect(0, 0, width, height);
 
-      // Six groups retain the red and pink colour spectrum.
+      // 180 radial bars with waves moving in different directions.
       for (const group of barGroups) {
         ctx.beginPath();
 
         for (let i = group.start; i < group.end; i++) {
           const bar = bars[i];
 
-          // Waves travel around the circle from different directions.
           const wave1 = Math.sin(bar.phase * 3 - elapsed * 2.0);
           const wave2 = Math.sin(bar.phase * 5 + elapsed * 1.6);
           const wave3 = Math.sin(bar.phase * 2 - elapsed * 1.2);
@@ -175,7 +171,7 @@ function Visualizer({ analyser, listening, onToggle }) {
         ctx.stroke();
       }
 
-      // Independent ring movement.
+      // Three independently rotating rings.
       drawRing(
         cx, cy, r - 13,
         elapsed * 0.55,
@@ -195,6 +191,7 @@ function Visualizer({ analyser, listening, onToggle }) {
       );
 
       ctx.globalAlpha = 1;
+      ctx.shadowBlur = 0;
     }
 
     animationId = requestAnimationFrame(draw);
