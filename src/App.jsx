@@ -23,6 +23,7 @@ function Visualizer({ analyser, listening, onToggle }) {
     let time = 0;
     let width = 0;
     let height = 0;
+    let smoothVolume = 0;
 
     const colors = ["#00BFFF", "#008CFF", "#4169E1", "#655CFF"];
     const lineMotion = lineMotionRef.current;
@@ -56,15 +57,27 @@ function Visualizer({ analyser, listening, onToggle }) {
       const analyser = analyserRef.current;
       const wave = waveRef.current;
 
+      let volume = 0;
+
       if (listeningRef.current && analyser && wave) {
         analyser.getByteTimeDomainData(wave);
+
+        let total = 0;
+
+        for (let i = 0; i < wave.length; i++) {
+          const value = (wave[i] - 128) / 128;
+          total += value * value;
+        }
+
+        volume = Math.sqrt(total / wave.length);
       }
 
-      // 120 independently moving audio lines
+      smoothVolume += (volume - smoothVolume) * 0.16;
+
+      // 120 independent lines around the complete circle
       for (let i = 0; i < 120; i++) {
         const baseAngle = (i / 120) * Math.PI * 2;
 
-        // Give every line its own rhythm and movement
         const phase = i * 2.399963;
         const speed = 0.65 + (i % 17) * 0.047;
 
@@ -72,7 +85,6 @@ function Visualizer({ analyser, listening, onToggle }) {
           Math.sin(time * speed + phase) * 2.2 +
           Math.sin(time * speed * 0.63 + phase * 1.7) * 1.4;
 
-        // Each line reads a different microphone sample
         let audioValue = 0;
 
         if (listeningRef.current && wave && wave.length > 0) {
@@ -80,13 +92,19 @@ function Visualizer({ analyser, listening, onToggle }) {
           audioValue = Math.abs((wave[sampleIndex] - 128) / 128);
         }
 
-        // Smooth individual microphone reactions
-        const target = audioValue * 38;
+        // Every line reacts to overall microphone volume
+        // while retaining its own individual audio movement
+        const voiceMovement = smoothVolume * 150;
+        const individualMovement = audioValue * 18;
+
+        const target = listeningRef.current
+          ? voiceMovement + individualMovement
+          : 0;
+
         lineMotion[i] += (target - lineMotion[i]) * 0.18;
 
-        const length = 5 + idle + lineMotion[i];
+        const length = Math.max(2, 5 + idle + lineMotion[i]);
 
-        // Tiny individual angle movement
         const angle =
           baseAngle +
           Math.sin(time * speed * 0.55 + phase) * 0.012;
