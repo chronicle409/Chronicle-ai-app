@@ -1,472 +1,303 @@
-
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import "./App.css";
 
-let findoraAudio = null;
-
-function playFindoraSound(type = "on") {
-  const file =
-    type === "off"
-      ? "/findora-off-clean.mp3"
-      : "/findora-on-fixed.mp3";
-
-  if (findoraAudio) {
-    findoraAudio.pause();
-    findoraAudio.currentTime = 0;
-  }
-
-  findoraAudio = new Audio(file);
-  findoraAudio.volume = 1;
-
-  findoraAudio.play().catch((error) => {
-    console.error("FINDORA sound error:", error);
-  });
-}
-
-function ChronicleLogo() {
-  return (
-    <div className="logo-stage">
-      <div className="logo-glow" />
-
-      <svg
-        className="main-logo"
-        viewBox="0 0 320 320"
-        role="img"
-        aria-label="Chronicle waveform logo"
-      >
-        <circle cx="160" cy="160" r="70" fill="white" />
-
-        <path
-          d="M111 160 L122 160 L130 155 L138 164 L146 151 L153 175 L160 132 L168 183 L176 145 L183 164 L190 153 L198 160 L210 160"
-          fill="none"
-          stroke="#ed174c"
-          strokeWidth="5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    </div>
-  );
-}
-
-function DetectiveIcon() {
-  return (
-    <svg viewBox="0 0 64 64" className="detective-icon"
-      fill="none" stroke="white" strokeWidth="2.5"
-      strokeLinecap="round" strokeLinejoin="round"
-      aria-label="Chronicle">
-      <path d="M12 27 L17 23 L21 11 L30 15 L36 10 L44 15 L47 24 L53 27 L55 34 L9 34 Z" />
-      <path d="M14 34 L50 34" />
-      <circle cx="22" cy="44" r="8" />
-      <circle cx="42" cy="44" r="8" />
-      <path d="M30 43 L34 43 M14 43 L8 39 M50 43 L56 39 M29 24 L38 24" />
-    </svg>
-  );
-}
-
-function MiniWave() {
-  return (
-    <svg viewBox="0 0 38 30" className="mini-wave">
-      <path
-        d="M1 15 H5 L9 8 L13 22 L17 3 L21 27 L25 8 L29 17 L33 12 L37 15"
-        fill="none"
-        stroke="white"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function ListeningAnimation({ stream }) {
+function Visualizer({ analyser, listening, onToggle }) {
   const canvasRef = useRef(null);
 
   useEffect(() => {
-    if (!stream || !canvasRef.current) return;
-
     const canvas = canvasRef.current;
+    if (!canvas) return;
+
     const ctx = canvas.getContext("2d");
-    const AudioContextClass =
-      window.AudioContext || window.webkitAudioContext;
+    let animation;
+    let elapsed = 0;
+    let lastFrame = 0;
+    let width = 0;
+    let height = 0;
+    let dpr = 1;
 
-    if (!AudioContextClass || !ctx) return;
+    const COUNT = 180;
+    const audioData = analyser
+      ? new Uint8Array(analyser.frequencyBinCount)
+      : null;
 
-    const audioContext = new AudioContextClass();
-    const analyser = audioContext.createAnalyser();
+    function resize() {
+      const rect = canvas.getBoundingClientRect();
 
-    analyser.fftSize = 512;
-    analyser.smoothingTimeConstant = 0.78;
+      dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      width = rect.width;
+      height = rect.height;
 
-    const microphone =
-      audioContext.createMediaStreamSource(stream);
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(height * dpr);
 
-    microphone.connect(analyser);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
 
-    const frequencyData = new Uint8Array(
-      analyser.frequencyBinCount
-    );
+    resize();
 
-    const barCount = 180;
-    const smoothValues = new Array(barCount).fill(0);
+    const observer = new ResizeObserver(resize);
+    observer.observe(canvas);
 
-    let animationFrame;
-    let active = true;
+    function draw(timestamp) {
+      animation = requestAnimationFrame(draw);
 
-    const center = 160;
-    const baseRadius = 91;
+      if (timestamp - lastFrame < 33) return;
 
-    function draw() {
-      if (!active) return;
+      lastFrame = timestamp;
+      elapsed += 0.033;
 
-      animationFrame = requestAnimationFrame(draw);
-      analyser.getByteFrequencyData(frequencyData);
+      ctx.clearRect(0, 0, width, height);
 
-      ctx.clearRect(0, 0, 320, 320);
+      const cx = width / 2;
+      const cy = height / 2;
+      const radius = Math.min(width, height) * 0.32;
 
-      const glow = ctx.createRadialGradient(
-        center, center, 65,
-        center, center, 145
-      );
+      if (analyser && audioData && listening) {
+        analyser.getByteFrequencyData(audioData);
+      }
 
-      glow.addColorStop(0, "rgba(237,23,76,0)");
-      glow.addColorStop(0.7, "rgba(237,23,76,0.06)");
-      glow.addColorStop(1, "rgba(237,23,76,0)");
+      for (let i = 0; i < COUNT; i++) {
+        const angle = (i / COUNT) * Math.PI * 2 - Math.PI / 2;
 
-      ctx.fillStyle = glow;
-      ctx.fillRect(0, 0, 320, 320);
+        const audio =
+          listening && audioData
+            ? audioData[
+                Math.floor((i / COUNT) * audioData.length)
+              ] / 255
+            : 0;
 
-      for (let i = 0; i < barCount; i++) {
-        const angle =
-          (i / barCount) * Math.PI * 2 - Math.PI / 2;
+        const wave =
+          Math.sin(elapsed * 2.5 + i * 0.19) * 0.5 + 0.5;
 
-        const dataIndex = Math.floor(
-          (i / barCount) * frequencyData.length * 0.75
-        );
+        const movement = listening
+          ? audio * 35 + wave * 8
+          : wave * 7;
 
-        const volume = frequencyData[dataIndex] / 255;
-
-        smoothValues[i] +=
-          (volume - smoothValues[i]) * 0.22;
-
-        const amplitude = smoothValues[i];
-        const variation = 2 + Math.sin(i * 0.31) * 1.5;
-        const barLength = variation + amplitude * 27;
-
-        const x1 =
-          center + Math.cos(angle) * baseRadius;
-        const y1 =
-          center + Math.sin(angle) * baseRadius;
-
-        const x2 =
-          center + Math.cos(angle) * (baseRadius + barLength);
-        const y2 =
-          center + Math.sin(angle) * (baseRadius + barLength);
-
-        const hue = 345 + Math.sin(i * 0.035) * 13;
-        const lightness = 38 + amplitude * 25;
+        const hue = (345 + (i / COUNT) * 45) % 360;
+        const color = `hsl(${hue}, 100%, 62%)`;
 
         ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
 
-        ctx.strokeStyle =
-          `hsl(${hue}, 95%, ${lightness}%)`;
+        ctx.moveTo(
+          cx + Math.cos(angle) * radius,
+          cy + Math.sin(angle) * radius
+        );
 
-        ctx.lineWidth = i % 4 === 0 ? 1.8 : 1.2;
-        ctx.lineCap = "round";
-        ctx.shadowColor = "#ff174c";
-        ctx.shadowBlur = amplitude > 0.08 ? 8 : 3;
+        ctx.lineTo(
+          cx + Math.cos(angle) * (radius + 8 + movement),
+          cy + Math.sin(angle) * (radius + 8 + movement)
+        );
+
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = color;
         ctx.stroke();
       }
 
+      function drawArc(rotation, color) {
+        ctx.beginPath();
+
+        ctx.arc(
+          cx,
+          cy,
+          radius - 13,
+          rotation,
+          rotation + 1.45
+        );
+
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 6;
+        ctx.lineCap = "round";
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = color;
+        ctx.stroke();
+      }
+
+      drawArc(elapsed * 0.65, "#ff1744");
+      drawArc(-elapsed * 0.55 + Math.PI, "#ff4d6d");
+      drawArc(elapsed * 0.35 + Math.PI, "#d50000");
+
       ctx.shadowBlur = 0;
-
-      ctx.beginPath();
-      ctx.arc(center, center, baseRadius, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(255,40,90,0.45)";
-      ctx.lineWidth = 0.7;
-      ctx.stroke();
     }
 
-    if (audioContext.state === "suspended") {
-      audioContext.resume().catch(console.error);
-    }
-
-    draw();
+    animation = requestAnimationFrame(draw);
 
     return () => {
-      active = false;
-      cancelAnimationFrame(animationFrame);
-      microphone.disconnect();
-      analyser.disconnect();
-
-      if (audioContext.state !== "closed") {
-        audioContext.close().catch(console.error);
-      }
+      cancelAnimationFrame(animation);
+      observer.disconnect();
     };
-  }, [stream]);
+  }, [analyser, listening]);
 
   return (
-    <div className="listening-visual">
-      <div className="visualizer-stage">
+    <button
+      type="button"
+      className={`visualizer-button ${listening ? "is-listening" : ""}`}
+      onClick={onToggle}
+      aria-label={listening ? "Stop listening" : "Start listening"}
+    >
+      <div className="visualizer-container">
         <canvas
           ref={canvasRef}
-          width="320"
-          height="320"
           className="visualizer-canvas"
         />
 
-        <svg className="findora-logo" viewBox="0 0 320 320">
-          <circle cx="160" cy="160" r="70" fill="white" />
-          <path
-            d="M111 160 L122 160 L130 155 L138 164 L146 151 L153 175 L160 132 L168 183 L176 145 L183 164 L190 153 L198 160 L210 160"
-            fill="none"
-            stroke="#ed174c"
-            strokeWidth="5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+        <div className="logo-circle">
+          <img
+            src="/findora-logo.png"
+            alt="FINDORA"
           />
-        </svg>
-      </div>
-
-      <div className="listening-info">
-        <h2>Listening for music</h2>
-        <p>Make sure your device can hear the song clearly</p>
-
-        <div className="small-bars">
-          {[8, 14, 20, 12, 17].map((height, index) => (
-            <span
-              key={index}
-              style={{
-                height: `${height}px`,
-                animationDelay: `${index * 0.12}s`,
-              }}
-            />
-          ))}
         </div>
       </div>
-    </div>
+    </button>
   );
 }
 
 export default function App() {
   const [listening, setListening] = useState(false);
-  const [micStream, setMicStream] = useState(null);
-  const [message, setMessage] = useState("");
+  const [analyser, setAnalyser] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [attachedFile, setAttachedFile] = useState(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchText, setSearchText] = useState("");
 
-  const fileInputRef = useRef(null);
+  const audioRef = useRef(null);
+  const streamRef = useRef(null);
 
-  async function handleVoiceClick() {
+  async function stopListening() {
+    streamRef.current?.getTracks().forEach(track => track.stop());
+
+    if (audioRef.current) {
+      await audioRef.current.close().catch(() => {});
+    }
+
+    streamRef.current = null;
+    audioRef.current = null;
+
+    setAnalyser(null);
+    setListening(false);
+  }
+
+  async function toggleListening() {
     if (listening) {
-      if (micStream) {
-        micStream.getTracks().forEach((track) => track.stop());
-      }
-
-      setMicStream(null);
-      setListening(false);
-      playFindoraSound("off");
+      await stopListening();
       return;
     }
 
     try {
-      if (!navigator.mediaDevices?.getUserMedia) {
-        throw new Error("Microphone access is unavailable.");
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true
+      });
+
+      const AudioClass =
+        window.AudioContext || window.webkitAudioContext;
+
+      if (!AudioClass) {
+        stream.getTracks().forEach(track => track.stop());
+        alert("Audio is not supported on this browser.");
+        return;
       }
 
-      const stream =
-        await navigator.mediaDevices.getUserMedia({
-          audio: {
-            echoCancellation: false,
-            noiseSuppression: false,
-            autoGainControl: false,
-          },
-        });
+      const audio = new AudioClass();
+      await audio.resume();
 
-      setMicStream(stream);
+      const source = audio.createMediaStreamSource(stream);
+      const analyserNode = audio.createAnalyser();
+
+      analyserNode.fftSize = 512;
+      source.connect(analyserNode);
+
+      streamRef.current = stream;
+      audioRef.current = audio;
+
+      setAnalyser(analyserNode);
       setListening(true);
-      playFindoraSound("on");
     } catch (error) {
-      console.error("Microphone error:", error);
-
-      alert(
-        "Please allow microphone access to use the listening feature."
-      );
+      alert("Please allow microphone access for FINDORA.");
     }
   }
 
   useEffect(() => {
     return () => {
-      if (micStream) {
-        micStream.getTracks().forEach((track) => track.stop());
-      }
+      streamRef.current?.getTracks().forEach(track => track.stop());
+      audioRef.current?.close();
     };
-  }, [micStream]);
-
-  function stopListening() {
-    if (micStream) {
-      micStream.getTracks().forEach((track) => track.stop());
-    }
-
-    setMicStream(null);
-    setListening(false);
-    playFindoraSound("off");
-  }
-
-  function chooseShortcut(text) {
-    setMessage(text);
-  }
-
-  function addEmoji() {
-    setMessage((previous) => previous + "🙂");
-  }
+  }, []);
 
   return (
-    <main className={`chronicle-app ${listening ? "is-listening" : ""}`}>
-
-      <header className="chronicle-header">
+    <main className="findora-app">
+      <header className="topbar">
         <button
-          className="header-button menu-button"
-          onClick={() => setMenuOpen(!menuOpen)}
-          aria-label="Open menu"
+          className="top-icon"
+          type="button"
+          aria-label="Menu"
+          onClick={() => {
+            setMenuOpen(!menuOpen);
+            setSearchOpen(false);
+          }}
         >
-          <span />
-          <span />
-          <span />
+          <svg viewBox="0 0 24 24">
+            <path d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
         </button>
 
-        <div className="header-mark">
-          <DetectiveIcon />
-        </div>
+        <button
+          className="top-icon"
+          type="button"
+          aria-label="Search"
+          onClick={() => {
+            setSearchOpen(!searchOpen);
+            setMenuOpen(false);
+          }}
+        >
+          <svg viewBox="0 0 24 24">
+            <circle cx="10.8" cy="10.8" r="6.8" />
+            <path d="m16 16 5 5" />
+          </svg>
+        </button>
       </header>
 
       {menuOpen && (
         <div className="menu-panel">
-          <strong>CHRONICLE</strong>
-          <button onClick={() => setMenuOpen(false)}>Home</button>
-          <button onClick={() => setMenuOpen(false)}>Close menu</button>
+          <button
+            type="button"
+            className="menu-mic"
+            aria-label="Toggle microphone"
+            onClick={() => {
+              setMenuOpen(false);
+              toggleListening();
+            }}
+          >
+            <svg viewBox="0 0 24 24">
+              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3m-4 0h8" />
+            </svg>
+          </button>
         </div>
       )}
 
-      {!listening ? (
-        <>
-          <section className="home-center">
-            <ChronicleLogo />
-          </section>
-
-          <section className="quick-actions">
-            <button
-              className="quick-action"
-              onClick={() => chooseShortcut("Create an image")}
-            >
-              <svg viewBox="0 0 32 32" aria-hidden="true">
-                <rect x="3" y="4" width="26" height="24" rx="3" />
-                <circle cx="21" cy="11" r="3" />
-                <path d="M4 24 L12 15 L19 22 L23 18 L29 25" />
-              </svg>
-              <span>Create an image</span>
-            </button>
-
-            <button
-              className="quick-action"
-              onClick={() => chooseShortcut("Translate language")}
-            >
-              <svg viewBox="0 0 32 32" aria-hidden="true">
-                <path d="M3 4 H22 V19 H14 L8 25 V19 H3 Z" />
-                <path d="M12 11 H26 V22 H22 V28 L16 22 H12" />
-                <path d="M8 9 H17 M12 7 V9 M10 12 Q12 16 17 17" />
-              </svg>
-              <span>Translate language</span>
-            </button>
-
-            <button
-              className="quick-action"
-              onClick={() => chooseShortcut("Search the web")}
-            >
-              <svg viewBox="0 0 32 32" aria-hidden="true">
-                <circle cx="16" cy="16" r="13" />
-                <path d="M3 16 H29 M16 3 C8 10 8 22 16 29 M16 3 C24 10 24 22 16 29" />
-              </svg>
-              <span>Search the web</span>
-            </button>
-          </section>
-
+      {searchOpen && (
+        <form
+          className="search-panel"
+          onSubmit={event => event.preventDefault()}
+        >
           <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden-file-input"
-            onChange={(event) =>
-              setAttachedFile(event.target.files?.[0] || null)
-            }
+            type="search"
+            value={searchText}
+            onChange={event => setSearchText(event.target.value)}
+            aria-label="Search"
+            autoFocus
           />
-
-          <footer className="ask-bar">
-            <button
-              className="plus-button"
-              aria-label="Add image"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              +
-            </button>
-
-            <input
-              className="ask-input"
-              value={message}
-              onChange={(event) => setMessage(event.target.value)}
-              placeholder={
-                attachedFile
-                  ? attachedFile.name
-                  : "Ask Chronicle"
-              }
-              aria-label="Message"
-            />
-
-            <button
-              className="small-tool emoji-button"
-              aria-label="Add emoji"
-              onClick={addEmoji}
-            >
-              ☺
-            </button>
-
-            <button
-              className="small-tool mic-button"
-              onClick={handleVoiceClick}
-              aria-label="Start microphone"
-            >
-              <svg viewBox="0 0 24 24">
-                <rect x="9" y="2" width="6" height="13" rx="3" />
-                <path d="M5 11 V13 A7 7 0 0 0 19 13 V11 M12 20 V23 M8 23 H16" />
-              </svg>
-            </button>
-
-            <button
-              className="voice-button"
-              onClick={handleVoiceClick}
-            >
-              <MiniWave />
-              <span>Voice</span>
-            </button>
-          </footer>
-        </>
-      ) : (
-        <>
-          <section className="listening-center">
-            <ListeningAnimation stream={micStream} />
-          </section>
-
-          <section className="listening-controls">
-            <button
-              className="stop-button"
-              onClick={stopListening}
-            >
-              Stop listening
-            </button>
-          </section>
-        </>
+        </form>
       )}
+
+      <section className="main-display">
+        <Visualizer
+          analyser={analyser}
+          listening={listening}
+          onToggle={toggleListening}
+        />
+      </section>
     </main>
   );
 }
