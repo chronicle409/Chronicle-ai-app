@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from "react";
 import "./App.css";
 
@@ -9,6 +10,8 @@ function Visualizer({ analyser, listening, onToggle }) {
     if (!canvas) return;
 
     const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
     let animation;
     let elapsed = 0;
     let lastFrame = 0;
@@ -16,7 +19,9 @@ function Visualizer({ analyser, listening, onToggle }) {
     let height = 0;
     let dpr = 1;
 
-    const COUNT = 180;
+    // Fewer bars for smoother performance
+    const COUNT = 100;
+
     const audioData = analyser
       ? new Uint8Array(analyser.frequencyBinCount)
       : null;
@@ -24,7 +29,9 @@ function Visualizer({ analyser, listening, onToggle }) {
     function resize() {
       const rect = canvas.getBoundingClientRect();
 
-      dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      // Lower resolution reduces mobile GPU workload
+      dpr = Math.min(window.devicePixelRatio || 1, 1.25);
+
       width = rect.width;
       height = rect.height;
 
@@ -42,10 +49,11 @@ function Visualizer({ analyser, listening, onToggle }) {
     function draw(timestamp) {
       animation = requestAnimationFrame(draw);
 
-      if (timestamp - lastFrame < 33) return;
+      // Run at approximately 24 frames per second
+      if (timestamp - lastFrame < 42) return;
 
       lastFrame = timestamp;
-      elapsed += 0.033;
+      elapsed += 0.042;
 
       ctx.clearRect(0, 0, width, height);
 
@@ -57,6 +65,7 @@ function Visualizer({ analyser, listening, onToggle }) {
         analyser.getByteFrequencyData(audioData);
       }
 
+      // Circular red spectrum
       for (let i = 0; i < COUNT; i++) {
         const angle = (i / COUNT) * Math.PI * 2 - Math.PI / 2;
 
@@ -91,11 +100,15 @@ function Visualizer({ analyser, listening, onToggle }) {
 
         ctx.strokeStyle = color;
         ctx.lineWidth = 2;
-        ctx.shadowBlur = 10;
+
+        // Lighter glow for better performance
+        ctx.shadowBlur = 3;
         ctx.shadowColor = color;
+
         ctx.stroke();
       }
 
+      // Moving red arcs
       function drawArc(rotation, color) {
         ctx.beginPath();
 
@@ -110,8 +123,9 @@ function Visualizer({ analyser, listening, onToggle }) {
         ctx.strokeStyle = color;
         ctx.lineWidth = 6;
         ctx.lineCap = "round";
-        ctx.shadowBlur = 20;
+        ctx.shadowBlur = 8;
         ctx.shadowColor = color;
+
         ctx.stroke();
       }
 
@@ -204,7 +218,10 @@ export default function App() {
       const source = audio.createMediaStreamSource(stream);
       const analyserNode = audio.createAnalyser();
 
-      analyserNode.fftSize = 512;
+      // Smaller audio buffer for lighter processing
+      analyserNode.fftSize = 256;
+      analyserNode.smoothingTimeConstant = 0.8;
+
       source.connect(analyserNode);
 
       streamRef.current = stream;
