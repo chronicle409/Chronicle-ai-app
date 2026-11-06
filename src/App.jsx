@@ -4,7 +4,14 @@ function Visualizer({ analyser, listening, onToggle }) {
   const analyserRef = useRef(analyser);
   const listeningRef = useRef(listening);
   const frequencyRef = useRef(null);
-  const lineMotionRef = useRef(new Float32Array(120));
+  const motionRef = useRef(
+    Array.from({ length: 120 }, (_, i) => ({
+      phase: i * 2.399963,
+      speed: 0.45 + ((i * 13) % 37) * 0.047,
+      amplitude: 7 + ((i * 17) % 13) * 1.1,
+      audio: 0
+    }))
+  );
 
   analyserRef.current = analyser;
 
@@ -29,7 +36,7 @@ function Visualizer({ analyser, listening, onToggle }) {
     let height = 0;
 
     const colors = ["#00BFFF", "#008CFF", "#4169E1", "#655CFF"];
-    const lineMotion = lineMotionRef.current;
+    const motions = motionRef.current;
 
     function resize() {
       const rect = canvas.getBoundingClientRect();
@@ -64,44 +71,45 @@ function Visualizer({ analyser, listening, onToggle }) {
         analyser.getByteFrequencyData(frequency);
       }
 
-      // 120 wave lines, each with its own movement pattern
+      // Every line has its own independent movement
       for (let i = 0; i < 120; i++) {
+        const motion = motions[i];
         const angle = (i / 120) * Math.PI * 2;
 
-        // Different speed, phase and amplitude for every line
-        const phase = i * 2.399963;
-        const speed = 0.35 + ((i * 7) % 31) * 0.055;
-        const amplitude = 5 + ((i * 11) % 9) * 1.1;
+        const wave1 = Math.sin(
+          time * motion.speed + motion.phase
+        ) * motion.amplitude;
 
-        const movement =
-          Math.sin(time * speed + phase) * amplitude +
-          Math.sin(time * speed * 1.73 + phase * 2.1) * 4.5 +
-          Math.cos(time * speed * 0.63 + phase * 0.8) * 3;
+        const wave2 = Math.cos(
+          time * motion.speed * 1.91 + motion.phase * 1.37
+        ) * 6;
 
-        // Each line listens to a different frequency range
+        const wave3 = Math.sin(
+          time * motion.speed * 0.53 + motion.phase * 2.73
+        ) * 4;
+
         let audioValue = 0;
 
-        if (listeningRef.current && frequency && frequency.length > 0) {
-          const position = i / 119;
+        if (listeningRef.current && frequency && frequency.length) {
           const bin = Math.min(
             frequency.length - 1,
-            Math.floor(
-              Math.pow(position, 1.8) * (frequency.length - 1)
-            )
+            Math.floor((i / 120) * frequency.length)
           );
 
           audioValue = frequency[bin] / 255;
         }
 
-        const target = listeningRef.current ? audioValue * 48 : 0;
-        lineMotion[i] += (target - lineMotion[i]) * 0.16;
+        const target = listeningRef.current ? audioValue * 45 : 0;
+        motion.audio += (target - motion.audio) * 0.18;
 
-        const length = Math.max(2, 10 + movement + lineMotion[i]);
+        const length = Math.max(
+          2,
+          12 + wave1 + wave2 + wave3 + motion.audio
+        );
 
-        // Small independent sideways movement
         const movingAngle =
           angle +
-          Math.sin(time * speed * 0.8 + phase) * 0.025;
+          Math.sin(time * motion.speed * 0.71 + motion.phase) * 0.035;
 
         const innerX = cx + Math.cos(movingAngle) * radius;
         const innerY = cy + Math.sin(movingAngle) * radius;
@@ -114,14 +122,13 @@ function Visualizer({ analyser, listening, onToggle }) {
         ctx.beginPath();
         ctx.moveTo(innerX, innerY);
         ctx.lineTo(outerX, outerY);
-
         ctx.strokeStyle = colors[i % colors.length];
         ctx.lineWidth = 2;
         ctx.lineCap = "round";
         ctx.stroke();
       }
 
-      // Original three rotating rings
+      // Three original rotating rings
       const rings = [
         { angle: time * 0.6, color: "#00BFFF" },
         { angle: -time * 0.45 + Math.PI, color: "#4169E1" },
@@ -130,13 +137,7 @@ function Visualizer({ analyser, listening, onToggle }) {
 
       rings.forEach((ring) => {
         ctx.beginPath();
-        ctx.arc(
-          cx,
-          cy,
-          radius - 13,
-          ring.angle,
-          ring.angle + 1.45
-        );
+        ctx.arc(cx, cy, radius - 13, ring.angle, ring.angle + 1.45);
         ctx.strokeStyle = ring.color;
         ctx.lineWidth = 5;
         ctx.lineCap = "round";
