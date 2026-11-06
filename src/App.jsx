@@ -1,7 +1,4 @@
 
-import React, { useEffect, useRef, useState } from "react";
-import "./App.css";
-
 function Visualizer({ analyser, listening, onToggle }) {
   const canvasRef = useRef(null);
 
@@ -22,6 +19,7 @@ function Visualizer({ analyser, listening, onToggle }) {
     let width = 0;
     let height = 0;
     let dpr = 1;
+    let gradient = null;
 
     const COUNT = 180;
     const FRAME_INTERVAL = 1000 / 30;
@@ -33,14 +31,45 @@ function Visualizer({ analyser, listening, onToggle }) {
     function resize() {
       const rect = canvas.getBoundingClientRect();
 
-      dpr = Math.min(window.devicePixelRatio || 1, 1.25);
-      width = rect.width;
-      height = rect.height;
+      const newDpr = Math.min(
+        window.devicePixelRatio || 1,
+        1
+      );
+
+      const newWidth = rect.width;
+      const newHeight = rect.height;
+
+      if (
+        newWidth === width &&
+        newHeight === height &&
+        newDpr === dpr
+      ) {
+        return;
+      }
+
+      width = newWidth;
+      height = newHeight;
+      dpr = newDpr;
 
       canvas.width = Math.round(width * dpr);
       canvas.height = Math.round(height * dpr);
 
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      const cx = width / 2;
+      const cy = height / 2;
+
+      gradient = ctx.createConicGradient(
+        -Math.PI / 2,
+        cx,
+        cy
+      );
+
+      gradient.addColorStop(0, "#ff1744");
+      gradient.addColorStop(0.25, "#ff4d6d");
+      gradient.addColorStop(0.5, "#ff1744");
+      gradient.addColorStop(0.75, "#ff8a3d");
+      gradient.addColorStop(1, "#ff1744");
     }
 
     resize();
@@ -48,16 +77,42 @@ function Visualizer({ analyser, listening, onToggle }) {
     const observer = new ResizeObserver(resize);
     observer.observe(canvas);
 
+    function drawArc(cx, cy, radius, rotation, color) {
+      const start = rotation;
+      const end = rotation + 1.45;
+
+      // Soft outer glow without expensive shadowBlur.
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, start, end);
+      ctx.strokeStyle = color;
+      ctx.globalAlpha = 0.18;
+      ctx.lineWidth = 13;
+      ctx.lineCap = "round";
+      ctx.stroke();
+
+      // Main bright ring.
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, start, end);
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 5;
+      ctx.lineCap = "round";
+      ctx.stroke();
+    }
+
     function draw(timestamp) {
       animation = requestAnimationFrame(draw);
 
       if (document.hidden) return;
+
       if (timestamp - lastFrame < FRAME_INTERVAL) return;
 
-      lastFrame = timestamp;
-      elapsed += FRAME_INTERVAL / 1000;
+      const delta = lastFrame
+        ? Math.min((timestamp - lastFrame) / 1000, 0.05)
+        : 0.033;
 
-      ctx.clearRect(0, 0, width, height);
+      lastFrame = timestamp;
+      elapsed += delta;
 
       const cx = width / 2;
       const cy = height / 2;
@@ -67,82 +122,82 @@ function Visualizer({ analyser, listening, onToggle }) {
         analyser.getByteFrequencyData(audioData);
       }
 
-      // Draw 180 red, crimson and pink radial bars.
-      // Grouping bars reduces repeated canvas drawing operations.
-      const groups = 6;
+      ctx.clearRect(0, 0, width, height);
 
-      for (let group = 0; group < groups; group++) {
-        const start = Math.floor((group / groups) * COUNT);
-        const end = Math.floor(((group + 1) / groups) * COUNT);
+      // 180 bars with waves travelling from different directions.
+      ctx.beginPath();
 
-        const hue = (345 + ((group + 0.5) / groups) * 45) % 360;
-        const color = `hsl(${hue}, 100%, 62%)`;
+      for (let i = 0; i < COUNT; i++) {
+        const angle =
+          (i / COUNT) * Math.PI * 2 - Math.PI / 2;
 
-        ctx.beginPath();
+        const audio = listening && audioData
+          ? audioData[
+              Math.floor((i / COUNT) * audioData.length)
+            ] / 255
+          : 0;
 
-        for (let i = start; i < end; i++) {
-          const angle =
-            (i / COUNT) * Math.PI * 2 - Math.PI / 2;
+        const waveOne =
+          Math.sin(angle * 3 - elapsed * 2.2);
 
-          const audio =
-            listening && audioData
-              ? audioData[
-                  Math.floor((i / COUNT) * audioData.length)
-                ] / 255
-              : 0;
+        const waveTwo =
+          Math.sin(angle * 5 + elapsed * 1.7);
 
-          const wave =
-            Math.sin(elapsed * 2.5 + i * 0.19) * 0.5 + 0.5;
+        const waveThree =
+          Math.sin(angle * 2 + elapsed * 1.2);
 
-          const movement = listening
-            ? audio * 35 + wave * 8
-            : wave * 7;
+        const combinedWave =
+          (waveOne + waveTwo + waveThree) / 3;
 
-          const inner = radius;
-          const outer = radius + 8 + movement;
+        const movement = listening
+          ? audio * 28 + 8 + combinedWave * 6
+          : 8 + combinedWave * 6;
 
-          ctx.moveTo(
-            cx + Math.cos(angle) * inner,
-            cy + Math.sin(angle) * inner
-          );
+        const outerRadius = radius + movement;
 
-          ctx.lineTo(
-            cx + Math.cos(angle) * outer,
-            cy + Math.sin(angle) * outer
-          );
-        }
-
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 2;
-        ctx.lineCap = "round";
-        ctx.stroke();
-      }
-
-      // Draw the three glowing rotating red arcs.
-      function drawArc(rotation, color) {
-        ctx.beginPath();
-
-        ctx.arc(
-          cx,
-          cy,
-          radius - 13,
-          rotation,
-          rotation + 1.45
+        ctx.moveTo(
+          cx + Math.cos(angle) * radius,
+          cy + Math.sin(angle) * radius
         );
 
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 6;
-        ctx.lineCap = "round";
-        ctx.shadowBlur = 14;
-        ctx.shadowColor = color;
-        ctx.stroke();
+        ctx.lineTo(
+          cx + Math.cos(angle) * outerRadius,
+          cy + Math.sin(angle) * outerRadius
+        );
       }
 
-      drawArc(elapsed * 0.65, "#ff1744");
-      drawArc(-elapsed * 0.55 + Math.PI, "#ff4d6d");
-      drawArc(elapsed * 0.35 + Math.PI, "#d50000");
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = gradient || "#ff1744";
+      ctx.lineWidth = 2;
+      ctx.lineCap = "round";
+      ctx.stroke();
 
-      ctx.shadowBlur = 0;
+      // Three rings rotating in different directions.
+      drawArc(
+        cx,
+        cy,
+        radius - 13,
+        elapsed * 0.65,
+        "#ff1744"
+      );
+
+      drawArc(
+        cx,
+        cy,
+        radius - 13,
+        -elapsed * 0.55 + Math.PI,
+        "#ff4d6d"
+      );
+
+      drawArc(
+        cx,
+        cy,
+        radius - 13,
+        elapsed * 0.35 + Math.PI,
+        "#d50000"
+      );
+
+      ctx.globalAlpha = 1;
     }
 
     animation = requestAnimationFrame(draw);
@@ -174,165 +229,5 @@ function Visualizer({ analyser, listening, onToggle }) {
         </div>
       </div>
     </button>
-  );
-}
-
-export default function App() {
-  const [listening, setListening] = useState(false);
-  const [analyser, setAnalyser] = useState(null);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [searchText, setSearchText] = useState("");
-
-  const audioRef = useRef(null);
-  const streamRef = useRef(null);
-  const listeningRef = useRef(false);
-
-  async function stopListening() {
-    listeningRef.current = false;
-
-    streamRef.current?.getTracks().forEach(track => track.stop());
-
-    if (audioRef.current) {
-      await audioRef.current.close().catch(() => {});
-    }
-
-    streamRef.current = null;
-    audioRef.current = null;
-
-    setAnalyser(null);
-    setListening(false);
-  }
-
-  async function toggleListening() {
-    if (listeningRef.current) {
-      await stopListening();
-      return;
-    }
-
-    try {
-      if (!navigator.mediaDevices?.getUserMedia) {
-        alert("Microphone access is not supported in this browser.");
-        return;
-      }
-
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: true
-      });
-
-      const AudioClass =
-        window.AudioContext || window.webkitAudioContext;
-
-      if (!AudioClass) {
-        stream.getTracks().forEach(track => track.stop());
-        alert("Audio is not supported on this browser.");
-        return;
-      }
-
-      const audio = new AudioClass();
-      await audio.resume();
-
-      const source = audio.createMediaStreamSource(stream);
-      const analyserNode = audio.createAnalyser();
-
-      analyserNode.fftSize = 512;
-      analyserNode.smoothingTimeConstant = 0.85;
-
-      source.connect(analyserNode);
-
-      streamRef.current = stream;
-      audioRef.current = audio;
-      listeningRef.current = true;
-
-      setAnalyser(analyserNode);
-      setListening(true);
-    } catch (error) {
-      listeningRef.current = false;
-      alert("Please allow microphone access for FINDORA.");
-    }
-  }
-
-  useEffect(() => {
-    return () => {
-      streamRef.current?.getTracks().forEach(track => track.stop());
-      audioRef.current?.close();
-    };
-  }, []);
-
-  return (
-    <main className="findora-app">
-      <header className="topbar">
-        <button
-          className="top-icon"
-          type="button"
-          aria-label="Menu"
-          onClick={() => {
-            setMenuOpen(!menuOpen);
-            setSearchOpen(false);
-          }}
-        >
-          <svg viewBox="0 0 24 24">
-            <path d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-
-        <button
-          className="top-icon"
-          type="button"
-          aria-label="Search"
-          onClick={() => {
-            setSearchOpen(!searchOpen);
-            setMenuOpen(false);
-          }}
-        >
-          <svg viewBox="0 0 24 24">
-            <circle cx="10.8" cy="10.8" r="6.8" />
-            <path d="m16 16 5 5" />
-          </svg>
-        </button>
-      </header>
-
-      {menuOpen && (
-        <div className="menu-panel">
-          <button
-            type="button"
-            className="menu-mic"
-            aria-label="Toggle microphone"
-            onClick={() => {
-              setMenuOpen(false);
-              toggleListening();
-            }}
-          >
-            <svg viewBox="0 0 24 24">
-              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-              <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3m-4 0h8" />
-            </svg>
-          </button>
-        </div>
-      )}
-
-      {searchOpen && (
-        <form
-          className="search-panel"
-          onSubmit={event => event.preventDefault()}
-        >
-          <input
-            type="search"
-            value={searchText}
-            onChange={event => setSearchText(event.target.value)}
-            aria-label="Search"
-            autoFocus
-          />
-        </form>
-      )}
-
-      <section className="main-display">
-        <Visualizer
-          analyser={analyser}
-          listening={listening}
-          onToggle={toggleListening}
-        />
-      </section>
-    </main>
   );
 }
