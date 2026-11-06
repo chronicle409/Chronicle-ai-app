@@ -52,7 +52,6 @@ function Visualizer({ analyser, listening, onToggle }) {
 
       canvas.width = Math.round(width * dpr);
       canvas.height = Math.round(height * dpr);
-
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
 
@@ -68,6 +67,66 @@ function Visualizer({ analyser, listening, onToggle }) {
       ctx.lineWidth = 6;
       ctx.lineCap = "round";
       ctx.stroke();
+    }
+
+    function drawMovingWave(cx, cy, baseRadius, waveData, track) {
+      const points = 240;
+      const phase = elapsed * (0.65 + track * 0.23);
+      const direction = track % 2 === 0 ? 1 : -1;
+      const offsetX = Math.sin(phase * 0.7 + track * 2) * baseRadius * 0.12;
+      const offsetY = Math.cos(phase * 0.55 + track * 3) * baseRadius * 0.12;
+
+      ctx.beginPath();
+
+      for (let i = 0; i <= points; i++) {
+        const progress = i / points;
+        const angle = progress * Math.PI * 2 + phase * direction;
+
+        const sampleIndex = Math.floor(
+          progress * (waveData.length - 1)
+        );
+
+        const sample = (waveData[sampleIndex] - 128) / 128;
+
+        const nextIndex = Math.min(sampleIndex + 8, waveData.length - 1);
+        const detail = (waveData[nextIndex] - 128) / 128;
+
+        const movingShape =
+          Math.sin(angle * (2 + track) + phase * 1.8) *
+          baseRadius * 0.09;
+
+        const soundMovement =
+          sample * baseRadius * 0.48 +
+          detail * baseRadius * 0.12;
+
+        const radius =
+          baseRadius + movingShape + soundMovement;
+
+        const x =
+          cx + offsetX +
+          Math.cos(angle) * radius;
+
+        const y =
+          cy + offsetY +
+          Math.sin(angle) * radius;
+
+        if (i === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+
+      ctx.closePath();
+
+      ctx.strokeStyle = colors[(track * 2) % colors.length];
+      ctx.lineWidth = track === 1 ? 3 : 2;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.shadowBlur = 13;
+      ctx.shadowColor = colors[(track * 2) % colors.length];
+      ctx.stroke();
+      ctx.shadowBlur = 0;
     }
 
     function animate(time) {
@@ -119,7 +178,7 @@ function Visualizer({ analyser, listening, onToggle }) {
       smoothVolume +=
         ((active ? volume : 0) - smoothVolume) * 0.18;
 
-      // Circular audio bars
+      // Existing circular audio bars
       for (let i = 0; i < 180; i++) {
         const angle = (i / 180) * Math.PI * 2 - Math.PI / 2;
 
@@ -138,7 +197,6 @@ function Visualizer({ analyser, listening, onToggle }) {
           colors[Math.floor((i / 180) * colors.length) % colors.length];
 
         ctx.beginPath();
-
         ctx.moveTo(
           cx + Math.cos(angle) * radius,
           cy + Math.sin(angle) * radius
@@ -155,78 +213,56 @@ function Visualizer({ analyser, listening, onToggle }) {
         ctx.stroke();
       }
 
-      // Live recording waveform line
+      // Three moving sound-reactive waveform paths
       if (active && waveData) {
-        const samples = 180;
+        const strength = Math.min(smoothVolume * 5, 1.5);
 
-        ctx.beginPath();
-
-        for (let i = 0; i <= samples; i++) {
-          const angle = (i / samples) * Math.PI * 2 - Math.PI / 2;
-
-          const index = Math.floor(
-            (i / samples) * (waveData.length - 1)
-          );
-
-          const sample = (waveData[index] - 128) / 128;
-
-          const movement = sample * 48;
-          const radiusWave = radius + 19 + movement;
-
-          const x = cx + Math.cos(angle) * radiusWave;
-          const y = cy + Math.sin(angle) * radiusWave;
-
-          if (i === 0) {
-            ctx.moveTo(x, y);
-          } else {
-            ctx.lineTo(x, y);
-          }
-        }
-
-        const gradient = ctx.createLinearGradient(
-          cx - radius,
-          cy - radius,
-          cx + radius,
-          cy + radius
+        drawMovingWave(
+          cx, cy,
+          radius + 10 + strength * 10,
+          waveData, 0
         );
 
-        gradient.addColorStop(0, "#00D5FF");
-        gradient.addColorStop(0.35, "#007BFF");
-        gradient.addColorStop(0.7, "#655CFF");
-        gradient.addColorStop(1, "#00BFFF");
+        drawMovingWave(
+          cx, cy,
+          radius + 34 + strength * 13,
+          waveData, 1
+        );
 
-        ctx.strokeStyle = gradient;
-        ctx.lineWidth = 3;
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
-        ctx.shadowBlur = 12;
-        ctx.shadowColor = "#008CFF";
-        ctx.stroke();
-        ctx.shadowBlur = 0;
+        drawMovingWave(
+          cx, cy,
+          radius + 57 + strength * 16,
+          waveData, 2
+        );
       } else {
-        // Gentle movement while not recording
-        ctx.beginPath();
+        // Gentle idle movement
+        for (let i = 0; i < 3; i++) {
+          ctx.beginPath();
 
-        for (let i = 0; i <= 180; i++) {
-          const angle = (i / 180) * Math.PI * 2 - Math.PI / 2;
+          const idleRadius = radius + 12 + i * 23;
 
-          const movement =
-            Math.sin(elapsed * 2 + i * 0.12) * 3;
+          for (let j = 0; j <= 180; j++) {
+            const angle = (j / 180) * Math.PI * 2;
 
-          const r = radius + 19 + movement;
+            const movement =
+              Math.sin(elapsed * (1.5 + i * 0.3) + j * 0.12) * 4;
 
-          const x = cx + Math.cos(angle) * r;
-          const y = cy + Math.sin(angle) * r;
+            const r = idleRadius + movement;
 
-          if (i === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
+            const x = cx + Math.cos(angle + elapsed * 0.15) * r;
+            const y = cy + Math.sin(angle + elapsed * 0.15) * r;
+
+            if (j === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+
+          ctx.strokeStyle = colors[i * 2];
+          ctx.lineWidth = 2;
+          ctx.stroke();
         }
-
-        ctx.strokeStyle = "#008CFF";
-        ctx.lineWidth = 2;
-        ctx.stroke();
       }
 
+      // Keep the original rotating rings
       drawArc(elapsed * 0.65, "#00BFFF", cx, cy, radius - 13);
       drawArc(-elapsed * 0.55 + Math.PI, "#4169E1", cx, cy, radius - 13);
       drawArc(elapsed * 0.35 + Math.PI, "#655CFF", cx, cy, radius - 13);
