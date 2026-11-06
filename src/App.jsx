@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from "react";
 
 export default function App() {
@@ -175,34 +176,35 @@ export default function App() {
         *{box-sizing:border-box}
         html,body,#root{margin:0;min-height:100%;background:#000}
         body{font-family:Arial,Helvetica,sans-serif}
-        .findora{min-height:100svh;background:#000;color:#f7f7f7;position:relative;overflow:hidden;padding:0 7.5% 14px;display:flex;flex-direction:column}
-        .topbar{height:82px;flex:none;display:flex;align-items:center;justify-content:space-between}
-        .iconbtn{border:0;background:transparent;color:white;padding:5px;display:grid;place-items:center;cursor:pointer}
-        .iconbtn svg{width:30px;height:30px;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
-        .profile svg{width:36px;height:36px}
-        .center-stage{flex:1;min-height:210px;display:flex;align-items:center;justify-content:center}
-        .pulse-logo{width:116px;height:116px;flex:none;border-radius:50%;background:#fff;display:grid;place-items:center}
-        .pulse-logo svg{width:83px;height:60px}
-        .voice-stage{flex:1;min-height:210px;display:flex;align-items:center;justify-content:center}
-        .voice-canvas{width:min(76vw,300px);height:min(76vw,300px);max-height:300px;max-width:300px}
-        .tool-list{display:flex;flex-direction:column;gap:18px;margin:0 0 24px 4px;flex:none}
-        .tool{display:flex;align-items:center;gap:18px;color:#f3f3f3;background:none;border:0;text-align:left;font-size:17px;cursor:pointer;padding:0}
-        .tool svg{width:30px;height:30px;stroke:white;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
-        .composer{height:62px;flex:none;border-radius:40px;background:#171717;display:flex;align-items:center;gap:9px;padding:6px 9px 6px 15px;margin:0 -1%}
-        .plus{font-size:32px;font-weight:200;line-height:1;background:none;border:0;color:white;cursor:pointer;padding:0 4px}
-        .prompt{background:transparent;border:0;outline:0;color:white;min-width:0;flex:1;font-size:14px}
+        .findora{height:100svh;min-height:620px;background:#000;color:#f7f7f7;position:relative;overflow:hidden;padding:0 7.4% max(4vh,24px);display:flex;flex-direction:column}
+        .topbar{height:9.5vh;min-height:76px;max-height:112px;flex:none;display:flex;align-items:center;justify-content:space-between}
+        .iconbtn{width:54px;height:54px;border:0;background:transparent;color:white;padding:0;display:grid;place-items:center;cursor:pointer}
+        .iconbtn svg{width:50px;height:50px;stroke:currentColor;fill:none;stroke-width:2.8;stroke-linecap:round;stroke-linejoin:round}
+        .profile svg{width:57px;height:57px;stroke-width:2.1}
+        .center-stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding-bottom:3vh}
+        .pulse-logo{width:min(34vw,234px);height:min(34vw,234px);flex:none;border-radius:50%;background:#fff;display:grid;place-items:center}
+        .pulse-logo svg{width:74%;height:58%}
+        .voice-stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding-bottom:3vh}
+        .voice-canvas{width:min(76vw,360px);height:min(76vw,360px);max-height:360px;max-width:360px}
+        .tool-list{display:flex;flex-direction:column;gap:29px;margin:0 0 5.1vh 4px;flex:none}
+        .tool{display:flex;align-items:center;gap:25px;color:#f3f3f3;background:none;border:0;text-align:left;font-size:clamp(18px,3.8vw,27px);cursor:pointer;padding:0;min-height:48px}
+        .tool svg{width:52px;height:52px;stroke:white;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+        .composer{height:clamp(88px,6.7vh,104px);flex:none;border-radius:60px;background:#171717;display:flex;align-items:center;gap:clamp(8px,1.6vw,14px);padding:8px 13px 8px 20px;margin:0 -2.3%}
+        .plus{font-size:47px;font-weight:200;line-height:1;background:none;border:0;color:white;cursor:pointer;padding:0 4px}
+        .prompt{background:transparent;border:0;outline:0;color:white;min-width:0;flex:1;font-size:clamp(16px,3.5vw,24px)}
         .prompt::placeholder{color:#d0d0d0}
         .smallbtn{background:transparent;border:0;color:white;padding:3px;cursor:pointer;display:grid;place-items:center}
-        .smallbtn svg{width:25px;height:25px;stroke:white;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-        .mic svg{width:24px;height:27px}
-        .voice-btn{border:0;border-radius:40px;background:#0878f9;color:white;display:flex;align-items:center;gap:6px;padding:8px 11px;font-size:15px;white-space:nowrap;cursor:pointer}
-        .voice-btn svg{width:25px;height:25px;stroke:white;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+        .smallbtn svg{width:39px;height:39px;stroke:white;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+        .mic svg{width:37px;height:41px}
+        .voice-btn{height:76px;border:0;border-radius:48px;background:#0878f9;color:white;display:flex;align-items:center;gap:9px;padding:0 19px;font-size:clamp(18px,3.8vw,25px);white-space:nowrap;cursor:pointer}
+        .voice-btn svg{width:40px;height:40px;stroke:white;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
         .voice-btn.active{background:#075dcc}
         .notice{font-size:12px;color:#aaa;text-align:center;margin:8px 0 0;flex:none}
-        .popover{position:absolute;top:70px;background:#1b1b1b;border:1px solid #333;border-radius:14px;padding:14px 18px;z-index:3;display:flex;flex-direction:column;gap:14px}
+        .popover{position:absolute;top:9vh;background:#1b1b1b;border:1px solid #333;border-radius:14px;padding:14px 18px;z-index:3;display:flex;flex-direction:column;gap:14px}
         .popover.left{left:7%}.popover.right{right:7%}
         .popover button{color:white;background:none;border:0;text-align:left;font-size:16px;padding:4px}
-        @media(max-height:650px){.topbar{height:64px}.tool-list{gap:12px;margin-bottom:14px}.center-stage,.voice-stage{min-height:160px}.composer{height:56px}}
+        @media(max-height:700px){.findora{min-height:560px;padding-bottom:14px}.topbar{height:70px;min-height:70px}.tool-list{gap:13px;margin-bottom:16px}.center-stage,.voice-stage{min-height:150px}.pulse-logo{width:min(29vw,180px);height:min(29vw,180px)}.composer{height:68px}.voice-btn{height:54px}.tool svg{width:38px;height:38px}.tool{min-height:38px;font-size:17px}}
+        @media(max-width:380px){.composer{gap:5px;padding-left:12px;padding-right:8px}.voice-btn{padding:0 11px}.voice-btn svg{width:30px}.smallbtn svg{width:31px;height:31px}.tool{gap:17px}}
       `}</style>
 
       <header className="topbar">
@@ -210,7 +212,7 @@ export default function App() {
           <svg viewBox="0 0 48 48"><path d="M5 9h38M5 24h38M5 39h38" /></svg>
         </button>
         <button className="iconbtn profile" aria-label="Profile" onClick={() => setProfileOpen(!profileOpen)}>
-          <svg viewBox="0 0 56 56"><path d="M8 27c4-4 36-4 40 0l-3 7H11zM13 26l4-15c1-3 5-2 8-1 4 2 7 2 11 0 3-1 6-1 7 2l4 14M18 36a7 7 0 1 0 14 0 7 7 0 0 0-14 0ZM34 36a7 7 0 1 0 14 0 7 7 0 0 0-14 0ZM32 36h2" /></svg>
+          <svg viewBox="0 0 64 64"><path d="M8 28 Q12 25 22 26 L25 12 Q26 7 31 10 Q39 14 46 10 Q51 8 53 14 L57 28 Q61 29 61 33 Q61 37 55 38 L10 38 Q4 37 4 33 Q4 29 8 28Z"/><path d="M9 31 Q31 35 57 31 M13 42 Q17 38 24 40 Q30 42 30 49 Q28 57 20 56 Q12 55 12 48 Q12 44 13 42ZM35 42 Q40 38 47 40 Q54 42 53 49 Q51 57 43 56 Q35 55 34 48 Q34 44 35 42ZM30 46 Q32 43 35 46"/></svg>
         </button>
       </header>
 
