@@ -9,7 +9,11 @@ function Visualizer({ analyser, listening, onToggle }) {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext("2d", {
+      alpha: true,
+      desynchronized: true
+    });
+
     if (!ctx) return;
 
     let animation;
@@ -17,10 +21,10 @@ function Visualizer({ analyser, listening, onToggle }) {
     let lastFrame = 0;
     let width = 0;
     let height = 0;
+    let dpr = 1;
 
-    // Lightweight animation settings
-    const COUNT = 48;
-    const FRAME_INTERVAL = 66;
+    const COUNT = 180;
+    const FRAME_INTERVAL = 1000 / 30;
 
     const audioData = analyser
       ? new Uint8Array(analyser.frequencyBinCount)
@@ -29,14 +33,14 @@ function Visualizer({ analyser, listening, onToggle }) {
     function resize() {
       const rect = canvas.getBoundingClientRect();
 
-      // Use normal screen resolution to reduce GPU workload
+      dpr = Math.min(window.devicePixelRatio || 1, 1.25);
       width = rect.width;
       height = rect.height;
 
-      canvas.width = Math.round(width);
-      canvas.height = Math.round(height);
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(height * dpr);
 
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
 
     resize();
@@ -47,11 +51,11 @@ function Visualizer({ analyser, listening, onToggle }) {
     function draw(timestamp) {
       animation = requestAnimationFrame(draw);
 
-      // Approximately 15 frames per second
+      if (document.hidden) return;
       if (timestamp - lastFrame < FRAME_INTERVAL) return;
 
       lastFrame = timestamp;
-      elapsed += 0.066;
+      elapsed += FRAME_INTERVAL / 1000;
 
       ctx.clearRect(0, 0, width, height);
 
@@ -63,48 +67,58 @@ function Visualizer({ analyser, listening, onToggle }) {
         analyser.getByteFrequencyData(audioData);
       }
 
-      // Circular red spectrum
-      for (let i = 0; i < COUNT; i++) {
-        const angle = (i / COUNT) * Math.PI * 2 - Math.PI / 2;
+      // Draw 180 red, crimson and pink radial bars.
+      // Grouping bars reduces repeated canvas drawing operations.
+      const groups = 6;
 
-        const audio =
-          listening && audioData
-            ? audioData[
-                Math.floor((i / COUNT) * audioData.length)
-              ] / 255
-            : 0;
+      for (let group = 0; group < groups; group++) {
+        const start = Math.floor((group / groups) * COUNT);
+        const end = Math.floor(((group + 1) / groups) * COUNT);
 
-        const wave =
-          Math.sin(elapsed * 2.5 + i * 0.19) * 0.5 + 0.5;
-
-        const movement = listening
-          ? audio * 35 + wave * 8
-          : wave * 7;
-
-        const hue = (345 + (i / COUNT) * 45) % 360;
+        const hue = (345 + ((group + 0.5) / groups) * 45) % 360;
         const color = `hsl(${hue}, 100%, 62%)`;
 
         ctx.beginPath();
 
-        ctx.moveTo(
-          cx + Math.cos(angle) * radius,
-          cy + Math.sin(angle) * radius
-        );
+        for (let i = start; i < end; i++) {
+          const angle =
+            (i / COUNT) * Math.PI * 2 - Math.PI / 2;
 
-        ctx.lineTo(
-          cx + Math.cos(angle) * (radius + 8 + movement),
-          cy + Math.sin(angle) * (radius + 8 + movement)
-        );
+          const audio =
+            listening && audioData
+              ? audioData[
+                  Math.floor((i / COUNT) * audioData.length)
+                ] / 255
+              : 0;
+
+          const wave =
+            Math.sin(elapsed * 2.5 + i * 0.19) * 0.5 + 0.5;
+
+          const movement = listening
+            ? audio * 35 + wave * 8
+            : wave * 7;
+
+          const inner = radius;
+          const outer = radius + 8 + movement;
+
+          ctx.moveTo(
+            cx + Math.cos(angle) * inner,
+            cy + Math.sin(angle) * inner
+          );
+
+          ctx.lineTo(
+            cx + Math.cos(angle) * outer,
+            cy + Math.sin(angle) * outer
+          );
+        }
 
         ctx.strokeStyle = color;
         ctx.lineWidth = 2;
-
-        // No individual bar glow
-        ctx.shadowBlur = 0;
+        ctx.lineCap = "round";
         ctx.stroke();
       }
 
-      // Three lightweight moving arcs
+      // Draw the three glowing rotating red arcs.
       function drawArc(rotation, color) {
         ctx.beginPath();
 
@@ -117,11 +131,10 @@ function Visualizer({ analyser, listening, onToggle }) {
         );
 
         ctx.strokeStyle = color;
-        ctx.lineWidth = 5;
+        ctx.lineWidth = 6;
         ctx.lineCap = "round";
-        ctx.shadowBlur = 4;
+        ctx.shadowBlur = 14;
         ctx.shadowColor = color;
-
         ctx.stroke();
       }
 
@@ -173,8 +186,11 @@ export default function App() {
 
   const audioRef = useRef(null);
   const streamRef = useRef(null);
+  const listeningRef = useRef(false);
 
   async function stopListening() {
+    listeningRef.current = false;
+
     streamRef.current?.getTracks().forEach(track => track.stop());
 
     if (audioRef.current) {
@@ -189,12 +205,17 @@ export default function App() {
   }
 
   async function toggleListening() {
-    if (listening) {
+    if (listeningRef.current) {
       await stopListening();
       return;
     }
 
     try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        alert("Microphone access is not supported in this browser.");
+        return;
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: true
       });
@@ -214,18 +235,19 @@ export default function App() {
       const source = audio.createMediaStreamSource(stream);
       const analyserNode = audio.createAnalyser();
 
-      // Smaller microphone processing buffer
-      analyserNode.fftSize = 128;
+      analyserNode.fftSize = 512;
       analyserNode.smoothingTimeConstant = 0.85;
 
       source.connect(analyserNode);
 
       streamRef.current = stream;
       audioRef.current = audio;
+      listeningRef.current = true;
 
       setAnalyser(analyserNode);
       setListening(true);
     } catch (error) {
+      listeningRef.current = false;
       alert("Please allow microphone access for FINDORA.");
     }
   }
