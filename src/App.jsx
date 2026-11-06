@@ -3,18 +3,17 @@ function Visualizer({ analyser, listening, onToggle }) {
   const canvasRef = useRef(null);
   const analyserRef = useRef(analyser);
   const listeningRef = useRef(listening);
-  const dataRef = useRef(null);
   const waveRef = useRef(null);
+  const dataRef = useRef(null);
 
   analyserRef.current = analyser;
 
   if (analyser) {
-    if (!dataRef.current || dataRef.current.length !== analyser.frequencyBinCount) {
-      dataRef.current = new Uint8Array(analyser.frequencyBinCount);
-    }
-
     if (!waveRef.current || waveRef.current.length !== analyser.fftSize) {
       waveRef.current = new Uint8Array(analyser.fftSize);
+    }
+    if (!dataRef.current || dataRef.current.length !== analyser.frequencyBinCount) {
+      dataRef.current = new Uint8Array(analyser.frequencyBinCount);
     }
   }
 
@@ -33,14 +32,8 @@ function Visualizer({ analyser, listening, onToggle }) {
     let smoothVolume = 0;
 
     const colors = [
-      "#00D5FF",
-      "#00BFFF",
-      "#008CFF",
-      "#007BFF",
-      "#315BFF",
-      "#4169E1",
-      "#655CFF",
-      "#1E90FF"
+      "#00D5FF", "#00BFFF", "#008CFF", "#007BFF",
+      "#315BFF", "#4169E1", "#655CFF", "#1E90FF"
     ];
 
     function resize() {
@@ -69,62 +62,65 @@ function Visualizer({ analyser, listening, onToggle }) {
       ctx.stroke();
     }
 
-    function drawMovingWave(cx, cy, baseRadius, waveData, track) {
-      const points = 240;
-      const phase = elapsed * (0.65 + track * 0.23);
+    // Flowing waveform that changes position and direction
+    function drawFlowWave(cx, cy, radius, waveData, track, strength) {
+      const points = 300;
+      const phase = elapsed * (0.8 + track * 0.3);
       const direction = track % 2 === 0 ? 1 : -1;
-      const offsetX = Math.sin(phase * 0.7 + track * 2) * baseRadius * 0.12;
-      const offsetY = Math.cos(phase * 0.55 + track * 3) * baseRadius * 0.12;
+
+      const driftX = Math.sin(phase * 0.55 + track) * radius * 0.12;
+      const driftY = Math.cos(phase * 0.7 + track * 2) * radius * 0.12;
+
+      const angleShift = Math.sin(phase * 0.35 + track) * 0.8;
+      const color = colors[(track * 2 + Math.floor(elapsed * 0.5)) % colors.length];
 
       ctx.beginPath();
 
       for (let i = 0; i <= points; i++) {
         const progress = i / points;
-        const angle = progress * Math.PI * 2 + phase * direction;
+        const samplePosition = Math.floor(progress * (waveData.length - 1));
+        const sample = (waveData[samplePosition] - 128) / 128;
 
-        const sampleIndex = Math.floor(
-          progress * (waveData.length - 1)
-        );
+        const nextPosition = Math.min(samplePosition + 5, waveData.length - 1);
+        const detail = (waveData[nextPosition] - 128) / 128;
 
-        const sample = (waveData[sampleIndex] - 128) / 128;
+        const angle =
+          progress * Math.PI * 2 * direction +
+          phase * direction +
+          angleShift;
 
-        const nextIndex = Math.min(sampleIndex + 8, waveData.length - 1);
-        const detail = (waveData[nextIndex] - 128) / 128;
+        const travelingWave =
+          Math.sin(progress * 12 + phase * 2 + track) *
+          radius * 0.055;
 
-        const movingShape =
-          Math.sin(angle * (2 + track) + phase * 1.8) *
-          baseRadius * 0.09;
+        const voiceWave =
+          (sample * 0.8 + detail * 0.2) *
+          radius * (0.12 + strength * 0.25);
 
-        const soundMovement =
-          sample * baseRadius * 0.48 +
-          detail * baseRadius * 0.12;
+        const sideWave =
+          Math.sin(angle * (2 + track) - phase * 1.5) *
+          radius * 0.055;
 
-        const radius =
-          baseRadius + movingShape + soundMovement;
+        const r = radius + travelingWave + voiceWave + sideWave;
 
         const x =
-          cx + offsetX +
-          Math.cos(angle) * radius;
+          cx + driftX +
+          Math.cos(angle) * r;
 
         const y =
-          cy + offsetY +
-          Math.sin(angle) * radius;
+          cy + driftY +
+          Math.sin(angle) * r;
 
-        if (i === 0) {
-          ctx.moveTo(x, y);
-        } else {
-          ctx.lineTo(x, y);
-        }
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
       }
 
-      ctx.closePath();
-
-      ctx.strokeStyle = colors[(track * 2) % colors.length];
+      ctx.strokeStyle = color;
       ctx.lineWidth = track === 1 ? 3 : 2;
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
-      ctx.shadowBlur = 13;
-      ctx.shadowColor = colors[(track * 2) % colors.length];
+      ctx.shadowBlur = 14;
+      ctx.shadowColor = color;
       ctx.stroke();
       ctx.shadowBlur = 0;
     }
@@ -148,16 +144,16 @@ function Visualizer({ analyser, listening, onToggle }) {
       const radius = Math.min(width, height) * 0.32;
 
       const currentAnalyser = analyserRef.current;
-      const audioData = dataRef.current;
       const waveData = waveRef.current;
+      const audioData = dataRef.current;
 
       let hasAudio = false;
       let volume = 0;
 
-      if (currentAnalyser && audioData && waveData) {
+      if (currentAnalyser && waveData && audioData) {
         try {
-          currentAnalyser.getByteFrequencyData(audioData);
           currentAnalyser.getByteTimeDomainData(waveData);
+          currentAnalyser.getByteFrequencyData(audioData);
 
           let total = 0;
 
@@ -176,13 +172,15 @@ function Visualizer({ analyser, listening, onToggle }) {
       const active = listeningRef.current && hasAudio;
 
       smoothVolume +=
-        ((active ? volume : 0) - smoothVolume) * 0.18;
+        ((active ? volume : 0) - smoothVolume) * 0.2;
 
-      // Existing circular audio bars
+      const strength = Math.min(smoothVolume * 5, 1.5);
+
+      // Original circular audio bars
       for (let i = 0; i < 180; i++) {
         const angle = (i / 180) * Math.PI * 2 - Math.PI / 2;
 
-        const wave =
+        const idleWave =
           Math.sin(elapsed * 2.5 + i * 0.19) * 0.5 + 0.5;
 
         const audio = active
@@ -190,8 +188,8 @@ function Visualizer({ analyser, listening, onToggle }) {
           : 0;
 
         const movement = active
-          ? audio * 35 + wave * 5
-          : wave * 7;
+          ? audio * 35 + idleWave * 5
+          : idleWave * 7;
 
         const color =
           colors[Math.floor((i / 180) * colors.length) % colors.length];
@@ -213,29 +211,13 @@ function Visualizer({ analyser, listening, onToggle }) {
         ctx.stroke();
       }
 
-      // Three moving sound-reactive waveform paths
+      // Moving voice-reactive waves
       if (active && waveData) {
-        const strength = Math.min(smoothVolume * 5, 1.5);
-
-        drawMovingWave(
-          cx, cy,
-          radius + 10 + strength * 10,
-          waveData, 0
-        );
-
-        drawMovingWave(
-          cx, cy,
-          radius + 34 + strength * 13,
-          waveData, 1
-        );
-
-        drawMovingWave(
-          cx, cy,
-          radius + 57 + strength * 16,
-          waveData, 2
-        );
+        drawFlowWave(cx, cy, radius + 12, waveData, 0, strength);
+        drawFlowWave(cx, cy, radius + 38, waveData, 1, strength);
+        drawFlowWave(cx, cy, radius + 64, waveData, 2, strength);
       } else {
-        // Gentle idle movement
+        // Gentle idle animation
         for (let i = 0; i < 3; i++) {
           ctx.beginPath();
 
@@ -248,7 +230,6 @@ function Visualizer({ analyser, listening, onToggle }) {
               Math.sin(elapsed * (1.5 + i * 0.3) + j * 0.12) * 4;
 
             const r = idleRadius + movement;
-
             const x = cx + Math.cos(angle + elapsed * 0.15) * r;
             const y = cy + Math.sin(angle + elapsed * 0.15) * r;
 
@@ -262,7 +243,7 @@ function Visualizer({ analyser, listening, onToggle }) {
         }
       }
 
-      // Keep the original rotating rings
+      // Original rotating rings
       drawArc(elapsed * 0.65, "#00BFFF", cx, cy, radius - 13);
       drawArc(-elapsed * 0.55 + Math.PI, "#4169E1", cx, cy, radius - 13);
       drawArc(elapsed * 0.35 + Math.PI, "#655CFF", cx, cy, radius - 13);
@@ -288,10 +269,7 @@ function Visualizer({ analyser, listening, onToggle }) {
       aria-label={listening ? "Stop listening" : "Start listening"}
     >
       <div className="visualizer-container">
-        <canvas
-          ref={canvasRef}
-          className="visualizer-canvas"
-        />
+        <canvas ref={canvasRef} className="visualizer-canvas" />
 
         <div className="logo-circle">
           <img src="/findora-logo.png" alt="FINDORA" />
