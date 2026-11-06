@@ -58,13 +58,20 @@ function Visualizer({ analyser, listening, onToggle }) {
 
       barGroups = [];
 
-      for (let group = 0; group < 6; group++) {
-        const hue = 345 + group * 7;
+      const blueColors = [
+        "#00BFFF",
+        "#009DFF",
+        "#007BFF",
+        "#4169E1",
+        "#00E5FF",
+        "#1E90FF"
+      ];
 
+      for (let group = 0; group < 6; group++) {
         barGroups.push({
           start: Math.floor(group * COUNT / 6),
           end: Math.floor((group + 1) * COUNT / 6),
-          color: `hsl(${hue}, 100%, 62%)`
+          color: blueColors[group]
         });
       }
     }
@@ -74,7 +81,6 @@ function Visualizer({ analyser, listening, onToggle }) {
 
     const radius = () => Math.min(width, height) * 0.32;
 
-    // Clean ring drawing without flickering shadows.
     function drawRing(cx, cy, r, rotation, color) {
       ctx.save();
 
@@ -169,23 +175,23 @@ function Visualizer({ analyser, listening, onToggle }) {
         ctx.stroke();
       }
 
-      // Three independently rotating rings.
+      // Three independently rotating blue rings.
       drawRing(
         cx, cy, r - 13,
         elapsed * 0.55,
-        "#ff1744"
+        "#00BFFF"
       );
 
       drawRing(
         cx, cy, r - 13,
         -elapsed * 0.45 + Math.PI,
-        "#ff4d6d"
+        "#4169E1"
       );
 
       drawRing(
         cx, cy, r - 13,
         elapsed * 0.30 + Math.PI,
-        "#d50000"
+        "#00E5FF"
       );
 
       ctx.globalAlpha = 1;
