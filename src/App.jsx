@@ -63,7 +63,6 @@ function Visualizer({ analyser, listening, onToggle }) {
         analyser.getByteTimeDomainData(wave);
 
         let total = 0;
-
         for (let i = 0; i < wave.length; i++) {
           const value = (wave[i] - 128) / 128;
           total += value * value;
@@ -72,42 +71,52 @@ function Visualizer({ analyser, listening, onToggle }) {
         volume = Math.sqrt(total / wave.length);
       }
 
-      smoothVolume += (volume - smoothVolume) * 0.16;
+      smoothVolume += (volume - smoothVolume) * 0.14;
 
-      // 120 independent lines around the complete circle
+      // Every line has its own movement
       for (let i = 0; i < 120; i++) {
         const baseAngle = (i / 120) * Math.PI * 2;
 
         const phase = i * 2.399963;
-        const speed = 0.65 + (i % 17) * 0.047;
+        const speed = 0.5 + (i % 19) * 0.075;
 
-        const idle =
-          Math.sin(time * speed + phase) * 2.2 +
-          Math.sin(time * speed * 0.63 + phase * 1.7) * 1.4;
+        // Different movement patterns for every line
+        const movement =
+          Math.sin(time * speed + phase) * 3.5 +
+          Math.sin(time * speed * 0.73 + phase * 1.8) * 2.0 +
+          Math.cos(time * speed * 0.41 + phase * 0.6) * 1.2;
 
+        // Individual microphone response
         let audioValue = 0;
 
         if (listeningRef.current && wave && wave.length > 0) {
-          const sampleIndex = Math.floor((i / 120) * wave.length);
+          const sampleIndex = Math.floor(
+            ((i * 37) % 120) / 120 * wave.length
+          );
+
           audioValue = Math.abs((wave[sampleIndex] - 128) / 128);
         }
 
-        // Every line reacts to overall microphone volume
-        // while retaining its own individual audio movement
-        const voiceMovement = smoothVolume * 150;
-        const individualMovement = audioValue * 18;
+        // Shared voice response keeps the whole circle active
+        const sharedVoice = smoothVolume * 110;
+
+        const individualVoice = audioValue * 22;
 
         const target = listeningRef.current
-          ? voiceMovement + individualMovement
+          ? sharedVoice + individualVoice
           : 0;
 
-        lineMotion[i] += (target - lineMotion[i]) * 0.18;
+        lineMotion[i] += (target - lineMotion[i]) * 0.16;
 
-        const length = Math.max(2, 5 + idle + lineMotion[i]);
+        const length = Math.max(
+          2,
+          7 + movement + lineMotion[i]
+        );
 
+        // Each line has a slightly different angle
         const angle =
           baseAngle +
-          Math.sin(time * speed * 0.55 + phase) * 0.012;
+          Math.sin(time * speed * 0.6 + phase) * 0.014;
 
         const innerX = cx + Math.cos(angle) * radius;
         const innerY = cy + Math.sin(angle) * radius;
@@ -125,7 +134,7 @@ function Visualizer({ analyser, listening, onToggle }) {
         ctx.stroke();
       }
 
-      // Three smooth rotating rings
+      // Three original rotating rings
       const rings = [
         { angle: time * 0.6, color: "#00BFFF" },
         { angle: -time * 0.45 + Math.PI, color: "#4169E1" },
