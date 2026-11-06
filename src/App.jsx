@@ -74,7 +74,7 @@ function Visualizer({ analyser, listening, onToggle }) {
 
     const radius = () => Math.min(width, height) * 0.32;
 
-    // Smooth ring drawing: one clean stroke per ring.
+    // Clean ring drawing without flickering shadows.
     function drawRing(cx, cy, r, rotation, color) {
       ctx.save();
 
@@ -91,9 +91,7 @@ function Visualizer({ analyser, listening, onToggle }) {
       ctx.strokeStyle = color;
       ctx.lineWidth = 6;
       ctx.lineCap = "round";
-
-      ctx.shadowBlur = 8;
-      ctx.shadowColor = color;
+      ctx.shadowBlur = 0;
 
       ctx.stroke();
 
