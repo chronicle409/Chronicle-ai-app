@@ -4,12 +4,14 @@ function Visualizer({ analyser, listening, onToggle }) {
   const analyserRef = useRef(analyser);
   const listeningRef = useRef(listening);
   const frequencyRef = useRef(null);
+
   const motionRef = useRef(
     Array.from({ length: 120 }, (_, i) => ({
       phase: i * 2.399963,
       speed: 0.45 + ((i * 13) % 37) * 0.047,
       amplitude: 7 + ((i * 17) % 13) * 1.1,
-      audio: 0
+      audio: 0,
+      audioGain: 0.35 + ((i * 19) % 17) / 17
     }))
   );
 
@@ -71,7 +73,7 @@ function Visualizer({ analyser, listening, onToggle }) {
         analyser.getByteFrequencyData(frequency);
       }
 
-      // Every line has its own independent movement
+      // All 120 lines move independently
       for (let i = 0; i < 120; i++) {
         const motion = motions[i];
         const angle = (i / 120) * Math.PI * 2;
@@ -88,18 +90,24 @@ function Visualizer({ analyser, listening, onToggle }) {
           time * motion.speed * 0.53 + motion.phase * 2.73
         ) * 4;
 
+        // Read the overall microphone sound level
         let audioValue = 0;
 
         if (listeningRef.current && frequency && frequency.length) {
-          const bin = Math.min(
-            frequency.length - 1,
-            Math.floor((i / 120) * frequency.length)
-          );
+          let total = 0;
 
-          audioValue = frequency[bin] / 255;
+          for (let j = 0; j < frequency.length; j++) {
+            total += frequency[j];
+          }
+
+          audioValue = total / (frequency.length * 255);
         }
 
-        const target = listeningRef.current ? audioValue * 45 : 0;
+        // Spread sound response across the entire circle
+        const target = listeningRef.current
+          ? audioValue * 65 * motion.audioGain
+          : 0;
+
         motion.audio += (target - motion.audio) * 0.18;
 
         const length = Math.max(
@@ -137,7 +145,13 @@ function Visualizer({ analyser, listening, onToggle }) {
 
       rings.forEach((ring) => {
         ctx.beginPath();
-        ctx.arc(cx, cy, radius - 13, ring.angle, ring.angle + 1.45);
+        ctx.arc(
+          cx,
+          cy,
+          radius - 13,
+          ring.angle,
+          ring.angle + 1.45
+        );
         ctx.strokeStyle = ring.color;
         ctx.lineWidth = 5;
         ctx.lineCap = "round";
