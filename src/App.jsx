@@ -3,13 +3,17 @@ function Visualizer({ analyser, listening, onToggle }) {
   const canvasRef = useRef(null);
   const analyserRef = useRef(analyser);
   const listeningRef = useRef(listening);
-  const waveRef = useRef(null);
+  const frequencyRef = useRef(null);
   const lineMotionRef = useRef(new Float32Array(120));
 
   analyserRef.current = analyser;
 
-  if (analyser && (!waveRef.current || waveRef.current.length !== analyser.fftSize)) {
-    waveRef.current = new Uint8Array(analyser.fftSize);
+  if (
+    analyser &&
+    (!frequencyRef.current ||
+      frequencyRef.current.length !== analyser.frequencyBinCount)
+  ) {
+    frequencyRef.current = new Uint8Array(analyser.frequencyBinCount);
   }
 
   useEffect(() => {
@@ -23,7 +27,6 @@ function Visualizer({ analyser, listening, onToggle }) {
     let time = 0;
     let width = 0;
     let height = 0;
-    let smoothVolume = 0;
 
     const colors = ["#00BFFF", "#008CFF", "#4169E1", "#655CFF"];
     const lineMotion = lineMotionRef.current;
@@ -55,74 +58,58 @@ function Visualizer({ analyser, listening, onToggle }) {
       const radius = Math.min(width, height) * 0.32;
 
       const analyser = analyserRef.current;
-      const wave = waveRef.current;
+      const frequency = frequencyRef.current;
 
-      let volume = 0;
-
-      if (listeningRef.current && analyser && wave) {
-        analyser.getByteTimeDomainData(wave);
-
-        let total = 0;
-        for (let i = 0; i < wave.length; i++) {
-          const value = (wave[i] - 128) / 128;
-          total += value * value;
-        }
-
-        volume = Math.sqrt(total / wave.length);
+      if (listeningRef.current && analyser && frequency) {
+        analyser.getByteFrequencyData(frequency);
       }
 
-      smoothVolume += (volume - smoothVolume) * 0.14;
-
-      // Every line has its own movement
+      // 120 individually animated lines
       for (let i = 0; i < 120; i++) {
-        const baseAngle = (i / 120) * Math.PI * 2;
+        const angle = (i / 120) * Math.PI * 2;
 
+        // Unique rhythm and speed for every line
         const phase = i * 2.399963;
-        const speed = 0.5 + (i % 19) * 0.075;
+        const speed = 0.7 + (i % 23) * 0.09;
+        const amplitude = 3 + (i % 7) * 0.9;
 
-        // Different movement patterns for every line
         const movement =
-          Math.sin(time * speed + phase) * 3.5 +
-          Math.sin(time * speed * 0.73 + phase * 1.8) * 2.0 +
-          Math.cos(time * speed * 0.41 + phase * 0.6) * 1.2;
+          Math.sin(time * speed + phase) * amplitude +
+          Math.cos(time * speed * 0.57 + phase * 1.9) * 3 +
+          Math.sin(time * speed * 1.31 + phase * 0.7) * 1.8;
 
-        // Individual microphone response
+        // Give each line its own microphone frequency
         let audioValue = 0;
 
-        if (listeningRef.current && wave && wave.length > 0) {
-          const sampleIndex = Math.floor(
-            ((i * 37) % 120) / 120 * wave.length
+        if (listeningRef.current && frequency && frequency.length > 0) {
+          const bin = Math.min(
+            frequency.length - 1,
+            Math.floor((i / 120) * frequency.length)
           );
 
-          audioValue = Math.abs((wave[sampleIndex] - 128) / 128);
+          audioValue = frequency[bin] / 255;
         }
 
-        // Shared voice response keeps the whole circle active
-        const sharedVoice = smoothVolume * 110;
-
-        const individualVoice = audioValue * 22;
-
         const target = listeningRef.current
-          ? sharedVoice + individualVoice
+          ? audioValue * 48
           : 0;
 
-        lineMotion[i] += (target - lineMotion[i]) * 0.16;
+        lineMotion[i] += (target - lineMotion[i]) * 0.2;
 
         const length = Math.max(
           2,
           7 + movement + lineMotion[i]
         );
 
-        // Each line has a slightly different angle
-        const angle =
-          baseAngle +
-          Math.sin(time * speed * 0.6 + phase) * 0.014;
+        // Slight independent angle movement
+        const movingAngle =
+          angle + Math.sin(time * speed + phase) * 0.018;
 
-        const innerX = cx + Math.cos(angle) * radius;
-        const innerY = cy + Math.sin(angle) * radius;
+        const innerX = cx + Math.cos(movingAngle) * radius;
+        const innerY = cy + Math.sin(movingAngle) * radius;
 
-        const outerX = cx + Math.cos(angle) * (radius + length);
-        const outerY = cy + Math.sin(angle) * (radius + length);
+        const outerX = cx + Math.cos(movingAngle) * (radius + length);
+        const outerY = cy + Math.sin(movingAngle) * (radius + length);
 
         ctx.beginPath();
         ctx.moveTo(innerX, innerY);
@@ -134,7 +121,7 @@ function Visualizer({ analyser, listening, onToggle }) {
         ctx.stroke();
       }
 
-      // Three original rotating rings
+      // Original three rotating rings
       const rings = [
         { angle: time * 0.6, color: "#00BFFF" },
         { angle: -time * 0.45 + Math.PI, color: "#4169E1" },
