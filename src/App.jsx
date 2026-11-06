@@ -1,21 +1,21 @@
 
-import { useState, useRef, useEffect } from "react";
-import "./App.css";
-
 function Visualizer({ analyser, listening, onToggle }) {
   const canvasRef = useRef(null);
   const analyserRef = useRef(analyser);
   const listeningRef = useRef(listening);
   const dataRef = useRef(null);
+  const waveRef = useRef(null);
 
   analyserRef.current = analyser;
 
-  if (
-    analyser &&
-    (!dataRef.current ||
-      dataRef.current.length !== analyser.frequencyBinCount)
-  ) {
-    dataRef.current = new Uint8Array(analyser.frequencyBinCount);
+  if (analyser) {
+    if (!dataRef.current || dataRef.current.length !== analyser.frequencyBinCount) {
+      dataRef.current = new Uint8Array(analyser.frequencyBinCount);
+    }
+
+    if (!waveRef.current || waveRef.current.length !== analyser.fftSize) {
+      waveRef.current = new Uint8Array(analyser.fftSize);
+    }
   }
 
   useEffect(() => {
@@ -30,6 +30,7 @@ function Visualizer({ analyser, listening, onToggle }) {
     let previousTime = 0;
     let width = 0;
     let height = 0;
+    let smoothVolume = 0;
 
     const colors = [
       "#00D5FF",
@@ -89,33 +90,48 @@ function Visualizer({ analyser, listening, onToggle }) {
 
       const currentAnalyser = analyserRef.current;
       const audioData = dataRef.current;
+      const waveData = waveRef.current;
 
       let hasAudio = false;
+      let volume = 0;
 
-      if (currentAnalyser && audioData) {
+      if (currentAnalyser && audioData && waveData) {
         try {
           currentAnalyser.getByteFrequencyData(audioData);
+          currentAnalyser.getByteTimeDomainData(waveData);
+
+          let total = 0;
+
+          for (let i = 0; i < waveData.length; i++) {
+            const sample = (waveData[i] - 128) / 128;
+            total += sample * sample;
+          }
+
+          volume = Math.sqrt(total / waveData.length);
           hasAudio = true;
         } catch (error) {
           hasAudio = false;
         }
       }
 
+      const active = listeningRef.current && hasAudio;
+
+      smoothVolume +=
+        ((active ? volume : 0) - smoothVolume) * 0.18;
+
+      // Circular audio bars
       for (let i = 0; i < 180; i++) {
-        const angle =
-          (i / 180) * Math.PI * 2 - Math.PI / 2;
+        const angle = (i / 180) * Math.PI * 2 - Math.PI / 2;
 
         const wave =
           Math.sin(elapsed * 2.5 + i * 0.19) * 0.5 + 0.5;
 
-        const audio = listeningRef.current && hasAudio
-          ? audioData[
-              Math.floor((i / 180) * audioData.length)
-            ] / 255
+        const audio = active
+          ? audioData[Math.floor((i / 180) * audioData.length)] / 255
           : 0;
 
-        const movement = listeningRef.current
-          ? audio * 35 + wave * 8
+        const movement = active
+          ? audio * 35 + wave * 5
           : wave * 7;
 
         const color =
@@ -136,6 +152,78 @@ function Visualizer({ analyser, listening, onToggle }) {
         ctx.strokeStyle = color;
         ctx.lineWidth = 2;
         ctx.lineCap = "round";
+        ctx.stroke();
+      }
+
+      // Live recording waveform line
+      if (active && waveData) {
+        const samples = 180;
+
+        ctx.beginPath();
+
+        for (let i = 0; i <= samples; i++) {
+          const angle = (i / samples) * Math.PI * 2 - Math.PI / 2;
+
+          const index = Math.floor(
+            (i / samples) * (waveData.length - 1)
+          );
+
+          const sample = (waveData[index] - 128) / 128;
+
+          const movement = sample * 48;
+          const radiusWave = radius + 19 + movement;
+
+          const x = cx + Math.cos(angle) * radiusWave;
+          const y = cy + Math.sin(angle) * radiusWave;
+
+          if (i === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            ctx.lineTo(x, y);
+          }
+        }
+
+        const gradient = ctx.createLinearGradient(
+          cx - radius,
+          cy - radius,
+          cx + radius,
+          cy + radius
+        );
+
+        gradient.addColorStop(0, "#00D5FF");
+        gradient.addColorStop(0.35, "#007BFF");
+        gradient.addColorStop(0.7, "#655CFF");
+        gradient.addColorStop(1, "#00BFFF");
+
+        ctx.strokeStyle = gradient;
+        ctx.lineWidth = 3;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.shadowBlur = 12;
+        ctx.shadowColor = "#008CFF";
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      } else {
+        // Gentle movement while not recording
+        ctx.beginPath();
+
+        for (let i = 0; i <= 180; i++) {
+          const angle = (i / 180) * Math.PI * 2 - Math.PI / 2;
+
+          const movement =
+            Math.sin(elapsed * 2 + i * 0.12) * 3;
+
+          const r = radius + 19 + movement;
+
+          const x = cx + Math.cos(angle) * r;
+          const y = cy + Math.sin(angle) * r;
+
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+
+        ctx.strokeStyle = "#008CFF";
+        ctx.lineWidth = 2;
         ctx.stroke();
       }
 
@@ -174,192 +262,5 @@ function Visualizer({ analyser, listening, onToggle }) {
         </div>
       </div>
     </button>
-  );
-}
-
-export default function App() {
-  const [listening, setListening] = useState(false);
-  const [analyser, setAnalyser] = useState(null);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [searchText, setSearchText] = useState("");
-
-  const streamRef = useRef(null);
-  const audioContextRef = useRef(null);
-  const sourceRef = useRef(null);
-  const busyRef = useRef(false);
-
-  async function startListening() {
-    if (busyRef.current) return;
-
-    busyRef.current = true;
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        }
-      });
-
-      const AudioContextClass =
-        window.AudioContext || window.webkitAudioContext;
-
-      if (!AudioContextClass) {
-        throw new Error("Audio is not supported by this browser.");
-      }
-
-      const audioContext = new AudioContextClass();
-
-      await audioContext.resume();
-
-      const audioAnalyser = audioContext.createAnalyser();
-      audioAnalyser.fftSize = 512;
-      audioAnalyser.smoothingTimeConstant = 0.82;
-
-      const source = audioContext.createMediaStreamSource(stream);
-      source.connect(audioAnalyser);
-
-      streamRef.current = stream;
-      audioContextRef.current = audioContext;
-      sourceRef.current = source;
-
-      setAnalyser(audioAnalyser);
-      setListening(true);
-    } catch (error) {
-      console.error("FINDORA microphone error:", error);
-
-      alert(
-        "FINDORA could not start the microphone. Please check your browser microphone permission and try again."
-      );
-    } finally {
-      busyRef.current = false;
-    }
-  }
-
-  async function stopListening() {
-    if (busyRef.current) return;
-
-    busyRef.current = true;
-
-    try {
-      if (sourceRef.current) {
-        sourceRef.current.disconnect();
-        sourceRef.current = null;
-      }
-
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-        streamRef.current = null;
-      }
-
-      if (audioContextRef.current) {
-        await audioContextRef.current.close();
-        audioContextRef.current = null;
-      }
-
-      setAnalyser(null);
-      setListening(false);
-    } catch (error) {
-      console.error("FINDORA stop error:", error);
-      setListening(false);
-    } finally {
-      busyRef.current = false;
-    }
-  }
-
-  async function toggleListening() {
-    if (listening) {
-      await stopListening();
-    } else {
-      await startListening();
-    }
-  }
-
-  useEffect(() => {
-    return () => {
-      if (sourceRef.current) {
-        sourceRef.current.disconnect();
-      }
-
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-      }
-
-      if (audioContextRef.current) {
-        audioContextRef.current.close().catch(() => {});
-      }
-    };
-  }, []);
-
-  return (
-    <div className="findora-app">
-      <header className="topbar">
-        <button
-          className="top-icon"
-          type="button"
-          onClick={() => {
-            setMenuOpen(!menuOpen);
-            setSearchOpen(false);
-          }}
-          aria-label="Open menu"
-        >
-          <svg viewBox="0 0 24 24">
-            <path d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-
-        <button
-          className="top-icon"
-          type="button"
-          onClick={() => {
-            setSearchOpen(!searchOpen);
-            setMenuOpen(false);
-          }}
-          aria-label="Search"
-        >
-          <svg viewBox="0 0 24 24">
-            <circle cx="10.8" cy="10.8" r="6.8" />
-            <path d="m16 16 5 5" />
-          </svg>
-        </button>
-      </header>
-
-      {menuOpen && (
-        <div className="menu-panel">
-          <button
-            className="menu-mic"
-            type="button"
-            onClick={toggleListening}
-            aria-label="Toggle microphone"
-          >
-            <svg viewBox="0 0 24 24">
-              <rect x="9" y="2" width="6" height="13" rx="3" />
-              <path d="M5 11a7 7 0 0 0 14 0M12 18v4M9 22h6" />
-            </svg>
-          </button>
-        </div>
-      )}
-
-      {searchOpen && (
-        <div className="search-panel">
-          <input
-            type="search"
-            placeholder="Search..."
-            value={searchText}
-            onChange={event => setSearchText(event.target.value)}
-          />
-        </div>
-      )}
-
-      <main className="main-display">
-        <Visualizer
-          analyser={analyser}
-          listening={listening}
-          onToggle={toggleListening}
-        />
-      </main>
-    </div>
   );
 }
