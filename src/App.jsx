@@ -64,52 +64,52 @@ function Visualizer({ analyser, listening, onToggle }) {
         analyser.getByteFrequencyData(frequency);
       }
 
-      // 120 individually animated lines
+      // 120 wave lines, each with its own movement pattern
       for (let i = 0; i < 120; i++) {
         const angle = (i / 120) * Math.PI * 2;
 
-        // Unique rhythm and speed for every line
+        // Different speed, phase and amplitude for every line
         const phase = i * 2.399963;
-        const speed = 0.7 + (i % 23) * 0.09;
-        const amplitude = 3 + (i % 7) * 0.9;
+        const speed = 0.35 + ((i * 7) % 31) * 0.055;
+        const amplitude = 5 + ((i * 11) % 9) * 1.1;
 
         const movement =
           Math.sin(time * speed + phase) * amplitude +
-          Math.cos(time * speed * 0.57 + phase * 1.9) * 3 +
-          Math.sin(time * speed * 1.31 + phase * 0.7) * 1.8;
+          Math.sin(time * speed * 1.73 + phase * 2.1) * 4.5 +
+          Math.cos(time * speed * 0.63 + phase * 0.8) * 3;
 
-        // Give each line its own microphone frequency
+        // Each line listens to a different frequency range
         let audioValue = 0;
 
         if (listeningRef.current && frequency && frequency.length > 0) {
+          const position = i / 119;
           const bin = Math.min(
             frequency.length - 1,
-            Math.floor((i / 120) * frequency.length)
+            Math.floor(
+              Math.pow(position, 1.8) * (frequency.length - 1)
+            )
           );
 
           audioValue = frequency[bin] / 255;
         }
 
-        const target = listeningRef.current
-          ? audioValue * 48
-          : 0;
+        const target = listeningRef.current ? audioValue * 48 : 0;
+        lineMotion[i] += (target - lineMotion[i]) * 0.16;
 
-        lineMotion[i] += (target - lineMotion[i]) * 0.2;
+        const length = Math.max(2, 10 + movement + lineMotion[i]);
 
-        const length = Math.max(
-          2,
-          7 + movement + lineMotion[i]
-        );
-
-        // Slight independent angle movement
+        // Small independent sideways movement
         const movingAngle =
-          angle + Math.sin(time * speed + phase) * 0.018;
+          angle +
+          Math.sin(time * speed * 0.8 + phase) * 0.025;
 
         const innerX = cx + Math.cos(movingAngle) * radius;
         const innerY = cy + Math.sin(movingAngle) * radius;
 
-        const outerX = cx + Math.cos(movingAngle) * (radius + length);
-        const outerY = cy + Math.sin(movingAngle) * (radius + length);
+        const outerX =
+          cx + Math.cos(movingAngle) * (radius + length);
+        const outerY =
+          cy + Math.sin(movingAngle) * (radius + length);
 
         ctx.beginPath();
         ctx.moveTo(innerX, innerY);
@@ -130,7 +130,13 @@ function Visualizer({ analyser, listening, onToggle }) {
 
       rings.forEach((ring) => {
         ctx.beginPath();
-        ctx.arc(cx, cy, radius - 13, ring.angle, ring.angle + 1.45);
+        ctx.arc(
+          cx,
+          cy,
+          radius - 13,
+          ring.angle,
+          ring.angle + 1.45
+        );
         ctx.strokeStyle = ring.color;
         ctx.lineWidth = 5;
         ctx.lineCap = "round";
