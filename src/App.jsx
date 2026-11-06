@@ -4,6 +4,7 @@ function Visualizer({ analyser, listening, onToggle }) {
   const analyserRef = useRef(analyser);
   const listeningRef = useRef(listening);
   const waveRef = useRef(null);
+  const lineMotionRef = useRef(new Float32Array(120));
 
   analyserRef.current = analyser;
 
@@ -24,6 +25,7 @@ function Visualizer({ analyser, listening, onToggle }) {
     let height = 0;
 
     const colors = ["#00BFFF", "#008CFF", "#4169E1", "#655CFF"];
+    const lineMotion = lineMotionRef.current;
 
     function resize() {
       const rect = canvas.getBoundingClientRect();
@@ -54,39 +56,50 @@ function Visualizer({ analyser, listening, onToggle }) {
       const analyser = analyserRef.current;
       const wave = waveRef.current;
 
-      let volume = 0;
-
       if (listeningRef.current && analyser && wave) {
         analyser.getByteTimeDomainData(wave);
-
-        let total = 0;
-        for (let i = 0; i < wave.length; i++) {
-          const value = (wave[i] - 128) / 128;
-          total += value * value;
-        }
-
-        volume = Math.sqrt(total / wave.length);
       }
 
-      // Clean animated audio bars
+      // 120 independently moving audio lines
       for (let i = 0; i < 120; i++) {
-        const angle = (i / 120) * Math.PI * 2;
-        const audioValue = wave && listeningRef.current
-          ? Math.abs((wave[Math.floor(i / 120 * wave.length)] - 128) / 128)
-          : 0;
+        const baseAngle = (i / 120) * Math.PI * 2;
 
-        const idle = Math.sin(time * 2 + i * 0.15) * 3;
-        const length = 5 + idle + audioValue * 38 + volume * 20;
+        // Give every line its own rhythm and movement
+        const phase = i * 2.399963;
+        const speed = 0.65 + (i % 17) * 0.047;
+
+        const idle =
+          Math.sin(time * speed + phase) * 2.2 +
+          Math.sin(time * speed * 0.63 + phase * 1.7) * 1.4;
+
+        // Each line reads a different microphone sample
+        let audioValue = 0;
+
+        if (listeningRef.current && wave && wave.length > 0) {
+          const sampleIndex = Math.floor((i / 120) * wave.length);
+          audioValue = Math.abs((wave[sampleIndex] - 128) / 128);
+        }
+
+        // Smooth individual microphone reactions
+        const target = audioValue * 38;
+        lineMotion[i] += (target - lineMotion[i]) * 0.18;
+
+        const length = 5 + idle + lineMotion[i];
+
+        // Tiny individual angle movement
+        const angle =
+          baseAngle +
+          Math.sin(time * speed * 0.55 + phase) * 0.012;
+
+        const innerX = cx + Math.cos(angle) * radius;
+        const innerY = cy + Math.sin(angle) * radius;
+
+        const outerX = cx + Math.cos(angle) * (radius + length);
+        const outerY = cy + Math.sin(angle) * (radius + length);
 
         ctx.beginPath();
-        ctx.moveTo(
-          cx + Math.cos(angle) * radius,
-          cy + Math.sin(angle) * radius
-        );
-        ctx.lineTo(
-          cx + Math.cos(angle) * (radius + length),
-          cy + Math.sin(angle) * (radius + length)
-        );
+        ctx.moveTo(innerX, innerY);
+        ctx.lineTo(outerX, outerY);
 
         ctx.strokeStyle = colors[i % colors.length];
         ctx.lineWidth = 2;
