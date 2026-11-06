@@ -6,46 +6,48 @@ function Visualizer({ analyser, listening, onToggle }) {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext("2d", {
-      alpha: true,
-      desynchronized: true
-    });
-
+    // Use a standard canvas context for better mobile stability.
+    const ctx = canvas.getContext("2d", { alpha: true });
     if (!ctx) return;
 
-    let animation;
-    let elapsed = 0;
-    let lastFrame = 0;
+    let animationId;
     let width = 0;
     let height = 0;
     let dpr = 1;
-    let gradient = null;
+    let elapsed = 0;
+    let previousTime = 0;
+    let resizeObserver;
+    let barGroups = [];
 
     const COUNT = 180;
-    const FRAME_INTERVAL = 1000 / 30;
-
     const audioData = analyser
       ? new Uint8Array(analyser.frequencyBinCount)
       : null;
 
+    // Calculate every bar's position only once.
+    const bars = Array.from({ length: COUNT }, (_, i) => {
+      const angle = (i / COUNT) * Math.PI * 2 - Math.PI / 2;
+
+      return {
+        x: Math.cos(angle),
+        y: Math.sin(angle),
+        phase: angle,
+        audioIndex: i
+      };
+    });
+
     function resize() {
       const rect = canvas.getBoundingClientRect();
 
-      const newDpr = Math.min(
-        window.devicePixelRatio || 1,
-        1
-      );
-
       const newWidth = rect.width;
       const newHeight = rect.height;
+      const newDpr = Math.min(window.devicePixelRatio || 1, 1.25);
 
       if (
-        newWidth === width &&
-        newHeight === height &&
-        newDpr === dpr
-      ) {
-        return;
-      }
+        width === newWidth &&
+        height === newHeight &&
+        dpr === newDpr
+      ) return;
 
       width = newWidth;
       height = newHeight;
@@ -59,40 +61,40 @@ function Visualizer({ analyser, listening, onToggle }) {
       const cx = width / 2;
       const cy = height / 2;
 
-      gradient = ctx.createConicGradient(
-        -Math.PI / 2,
-        cx,
-        cy
-      );
+      barGroups = [];
 
-      gradient.addColorStop(0, "#ff1744");
-      gradient.addColorStop(0.25, "#ff4d6d");
-      gradient.addColorStop(0.5, "#ff1744");
-      gradient.addColorStop(0.75, "#ff8a3d");
-      gradient.addColorStop(1, "#ff1744");
+      for (let group = 0; group < 6; group++) {
+        const hue = 345 + group * 7;
+
+        barGroups.push({
+          start: Math.floor(group * COUNT / 6),
+          end: Math.floor((group + 1) * COUNT / 6),
+          color: `hsl(${hue}, 100%, 62%)`
+        });
+      }
     }
 
-    resize();
+    resizeObserver = new ResizeObserver(resize);
+    resizeObserver.observe(canvas);
 
-    const observer = new ResizeObserver(resize);
-    observer.observe(canvas);
+    const radius = () => Math.min(width, height) * 0.32;
 
-    function drawArc(cx, cy, radius, rotation, color) {
+    function drawRing(cx, cy, r, rotation, color) {
       const start = rotation;
       const end = rotation + 1.45;
 
-      // Soft outer glow without expensive shadowBlur.
+      // Soft outer glow.
       ctx.beginPath();
-      ctx.arc(cx, cy, radius, start, end);
+      ctx.arc(cx, cy, r, start, end);
+      ctx.globalAlpha = 0.20;
       ctx.strokeStyle = color;
-      ctx.globalAlpha = 0.18;
-      ctx.lineWidth = 13;
+      ctx.lineWidth = 12;
       ctx.lineCap = "round";
       ctx.stroke();
 
-      // Main bright ring.
+      // Sharp inner ring.
       ctx.beginPath();
-      ctx.arc(cx, cy, radius, start, end);
+      ctx.arc(cx, cy, r, start, end);
       ctx.globalAlpha = 1;
       ctx.strokeStyle = color;
       ctx.lineWidth = 5;
@@ -101,110 +103,105 @@ function Visualizer({ analyser, listening, onToggle }) {
     }
 
     function draw(timestamp) {
-      animation = requestAnimationFrame(draw);
+      animationId = requestAnimationFrame(draw);
 
-      if (document.hidden) return;
+      if (document.hidden) {
+        previousTime = 0;
+        return;
+      }
 
-      if (timestamp - lastFrame < FRAME_INTERVAL) return;
+      const delta = previousTime
+        ? Math.min((timestamp - previousTime) / 1000, 0.04)
+        : 0;
 
-      const delta = lastFrame
-        ? Math.min((timestamp - lastFrame) / 1000, 0.05)
-        : 0.033;
-
-      lastFrame = timestamp;
+      previousTime = timestamp;
       elapsed += delta;
 
       const cx = width / 2;
       const cy = height / 2;
-      const radius = Math.min(width, height) * 0.32;
+      const r = radius();
 
+      if (!width || !height) return;
+
+      // Read microphone data once per frame.
       if (analyser && audioData && listening) {
         analyser.getByteFrequencyData(audioData);
       }
 
       ctx.clearRect(0, 0, width, height);
 
-      // 180 bars with waves travelling from different directions.
-      ctx.beginPath();
+      // Six groups retain the red and pink colour spectrum.
+      for (const group of barGroups) {
+        ctx.beginPath();
 
-      for (let i = 0; i < COUNT; i++) {
-        const angle =
-          (i / COUNT) * Math.PI * 2 - Math.PI / 2;
+        for (let i = group.start; i < group.end; i++) {
+          const bar = bars[i];
 
-        const audio = listening && audioData
-          ? audioData[
-              Math.floor((i / COUNT) * audioData.length)
-            ] / 255
-          : 0;
+          // Waves travel around the circle from different directions.
+          const wave1 = Math.sin(bar.phase * 3 - elapsed * 2.0);
+          const wave2 = Math.sin(bar.phase * 5 + elapsed * 1.6);
+          const wave3 = Math.sin(bar.phase * 2 - elapsed * 1.2);
 
-        const waveOne =
-          Math.sin(angle * 3 - elapsed * 2.2);
+          const wave = (wave1 + wave2 + wave3) / 3;
 
-        const waveTwo =
-          Math.sin(angle * 5 + elapsed * 1.7);
+          let audioMovement = 0;
 
-        const waveThree =
-          Math.sin(angle * 2 + elapsed * 1.2);
+          if (listening && audioData) {
+            const index = Math.floor(
+              (i / COUNT) * audioData.length
+            );
 
-        const combinedWave =
-          (waveOne + waveTwo + waveThree) / 3;
+            audioMovement = (audioData[index] / 255) * 28;
+          }
 
-        const movement = listening
-          ? audio * 28 + 8 + combinedWave * 6
-          : 8 + combinedWave * 6;
+          const movement = 8 + wave * 6 + audioMovement;
+          const outer = r + movement;
 
-        const outerRadius = radius + movement;
+          ctx.moveTo(
+            cx + bar.x * r,
+            cy + bar.y * r
+          );
 
-        ctx.moveTo(
-          cx + Math.cos(angle) * radius,
-          cy + Math.sin(angle) * radius
-        );
+          ctx.lineTo(
+            cx + bar.x * outer,
+            cy + bar.y * outer
+          );
+        }
 
-        ctx.lineTo(
-          cx + Math.cos(angle) * outerRadius,
-          cy + Math.sin(angle) * outerRadius
-        );
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = group.color;
+        ctx.lineWidth = 2;
+        ctx.lineCap = "round";
+        ctx.stroke();
       }
 
-      ctx.globalAlpha = 1;
-      ctx.strokeStyle = gradient || "#ff1744";
-      ctx.lineWidth = 2;
-      ctx.lineCap = "round";
-      ctx.stroke();
-
-      // Three rings rotating in different directions.
-      drawArc(
-        cx,
-        cy,
-        radius - 13,
-        elapsed * 0.65,
+      // Independent ring movement.
+      drawRing(
+        cx, cy, r - 13,
+        elapsed * 0.55,
         "#ff1744"
       );
 
-      drawArc(
-        cx,
-        cy,
-        radius - 13,
-        -elapsed * 0.55 + Math.PI,
+      drawRing(
+        cx, cy, r - 13,
+        -elapsed * 0.45 + Math.PI,
         "#ff4d6d"
       );
 
-      drawArc(
-        cx,
-        cy,
-        radius - 13,
-        elapsed * 0.35 + Math.PI,
+      drawRing(
+        cx, cy, r - 13,
+        elapsed * 0.30 + Math.PI,
         "#d50000"
       );
 
       ctx.globalAlpha = 1;
     }
 
-    animation = requestAnimationFrame(draw);
+    animationId = requestAnimationFrame(draw);
 
     return () => {
-      cancelAnimationFrame(animation);
-      observer.disconnect();
+      cancelAnimationFrame(animationId);
+      resizeObserver?.disconnect();
     };
   }, [analyser, listening]);
 
