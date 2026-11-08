@@ -2,42 +2,38 @@
 .composer {
   position: absolute;
   left: 10%;
-  bottom: 4.5%;
+  bottom: 4%;
   width: 76%;
-  height: 58px;
+  height: 90px;
   box-sizing: border-box;
-
   display: flex;
   align-items: center;
   gap: 5px;
-
-  padding: 5px 7px;
+  padding: 8px 10px;
   background: #202020;
   border: 1px solid #292929;
-  border-radius: 40px;
+  border-radius: 50px;
 }
 
 .composer .plus {
-  flex: 0 0 35px;
-  width: 35px;
-  height: 42px;
-  padding: 0;
+  flex: 0 0 45px;
+  height: 60px;
   background: transparent;
   border: none;
   color: white;
-  font-size: 34px;
+  font-size: 42px;
 }
 
 .composer .prompt {
   flex: 1;
   min-width: 0;
   height: 100%;
-  padding: 0 3px;
+  padding: 0 4px;
   background: transparent;
   border: none;
   outline: none;
   color: white;
-  font-size: 15px;
+  font-size: 17px;
 }
 
 .composer .prompt::placeholder {
@@ -46,21 +42,19 @@
 }
 
 .composer .smallbtn {
-  flex: 0 0 30px;
-  width: 30px;
-  height: 42px;
-  padding: 0;
+  flex: 0 0 40px;
+  height: 60px;
   background: transparent;
   border: none;
-  color: white;
   display: flex;
   align-items: center;
   justify-content: center;
+  color: white;
 }
 
 .composer .smallbtn svg {
-  width: 23px;
-  height: 23px;
+  width: 27px;
+  height: 27px;
   fill: none;
   stroke: white;
   stroke-width: 1.8;
@@ -69,57 +63,28 @@
 }
 
 .composer .voice-btn {
-  flex: 0 0 88px;
-  width: 88px;
-  min-width: 88px;
-  height: 46px;
-  padding: 0 7px;
+  flex: 0 0 140px;
+  width: 140px;
+  min-width: 140px;
+  height: 66px;
+  padding: 0 10px;
   border: none;
-  border-radius: 30px;
+  border-radius: 40px;
   background: #2879f5;
   color: white;
-
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  font-size: 14px;
+  gap: 8px;
+  font-size: 17px;
 }
 
 .composer .voice-btn svg {
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   fill: none;
   stroke: white;
   stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
-}
-
-@media (max-width: 380px) {
-  .composer {
-    left: 7%;
-    width: 86%;
-    height: 58px;
-    bottom: 4.5%;
-    gap: 3px;
-    padding: 5px;
-  }
-
-  .composer .plus {
-    flex-basis: 30px;
-    width: 30px;
-  }
-
-  .composer .smallbtn {
-    flex-basis: 27px;
-    width: 27px;
-  }
-
-  .composer .voice-btn {
-    flex-basis: 82px;
-    width: 82px;
-    min-width: 82px;
-    font-size: 13px;
-  }
 }
