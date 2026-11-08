@@ -1,39 +1,40 @@
 
 .composer {
   position: absolute;
-  left: 10%;
-  bottom: 4%;
-  width: 76%;
-  height: 90px;
+  left: 5%;
+  bottom: 3%;
+  width: 90%;
+  height: 48px;
   box-sizing: border-box;
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 8px 10px;
-  background: #202020;
-  border: 1px solid #292929;
-  border-radius: 50px;
+  gap: 2px;
+  padding: 4px 6px;
+  background: #212121;
+  border: 1px solid #383838;
+  border-radius: 26px;
 }
 
 .composer .plus {
-  flex: 0 0 45px;
-  height: 60px;
+  flex: 0 0 29px;
+  height: 36px;
+  padding: 0;
   background: transparent;
   border: none;
   color: white;
-  font-size: 42px;
+  font-size: 25px;
 }
 
 .composer .prompt {
   flex: 1;
   min-width: 0;
   height: 100%;
-  padding: 0 4px;
+  padding: 0 3px;
   background: transparent;
   border: none;
   outline: none;
   color: white;
-  font-size: 17px;
+  font-size: 14px;
 }
 
 .composer .prompt::placeholder {
@@ -42,49 +43,45 @@
 }
 
 .composer .smallbtn {
-  flex: 0 0 40px;
-  height: 60px;
+  flex: 0 0 25px;
+  height: 36px;
+  padding: 0;
   background: transparent;
   border: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
 }
 
 .composer .smallbtn svg {
-  width: 27px;
-  height: 27px;
+  width: 18px;
+  height: 18px;
   fill: none;
   stroke: white;
   stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
 }
 
 .composer .voice-btn {
-  flex: 0 0 140px;
-  width: 140px;
-  min-width: 140px;
-  height: 66px;
-  padding: 0 10px;
+  flex: 0 0 76px;
+  width: 76px;
+  min-width: 76px;
+  height: 38px;
+  padding: 0 5px;
   border: none;
-  border-radius: 40px;
+  border-radius: 22px;
   background: #2879f5;
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  font-size: 17px;
+  gap: 4px;
+  font-size: 12px;
 }
 
 .composer .voice-btn svg {
-  width: 28px;
-  height: 28px;
+  width: 18px;
+  height: 18px;
   fill: none;
   stroke: white;
   stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
 }
