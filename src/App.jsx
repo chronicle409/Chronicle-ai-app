@@ -8,130 +8,146 @@ export default function App() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [prompt, setPrompt] = useState("");
   const [notice, setNotice] = useState("");
-
   const canvasRef = useRef(null);
+  const analyserRef = useRef(null);
   const audioRef = useRef(null);
   const streamRef = useRef(null);
-  const analyserRef = useRef(null);
-  const listeningRef = useRef(false);
+  const animationRef = useRef(null);
 
   useEffect(() => {
-    listeningRef.current = listening;
-  }, [listening]);
-
-  useEffect(() => {
-    if (!voiceOpen) return;
-
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const ctx = canvas.getContext("2d");
-    const count = 120;
-    const bars = Array.from({ length: count }, () => ({
-      value: 3,
-      gain: 0.65 + Math.random() * 1.2,
-    }));
+    let width = 0;
+    let height = 0;
+    let frame = 0;
 
-    let raf;
-    let bins = null;
+    const resize = () => {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      width = rect.width;
+      height = rect.height;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
 
-    function render() {
-      const cx = canvas.width / 2;
-      const cy = canvas.height / 2;
-      const radius = Math.min(canvas.width, canvas.height) * 0.29;
+    resize();
+    window.addEventListener("resize", resize);
 
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const draw = () => {
+      ctx.clearRect(0, 0, width, height);
 
+      const cx = width / 2;
+      const cy = height / 2;
+      const baseRadius = Math.min(width, height) * 0.31;
       const analyser = analyserRef.current;
+      const data = analyser
+        ? new Uint8Array(analyser.frequencyBinCount)
+        : null;
 
-      if (analyser) {
-        if (!bins || bins.length !== analyser.frequencyBinCount) {
-          bins = new Uint8Array(analyser.frequencyBinCount);
-        }
+      if (analyser && data) analyser.getByteFrequencyData(data);
 
-        if (listeningRef.current) {
-          analyser.getByteFrequencyData(bins);
-        } else {
-          bins.fill(0);
-        }
-      }
+      frame += 0.012;
 
-      let peak = 0;
-      let average = 0;
-
-      if (bins && listeningRef.current) {
-        for (let i = 0; i < bins.length; i++) {
-          average += bins[i];
-          peak = Math.max(peak, bins[i]);
-        }
-        average /= bins.length;
-      }
-
-      const speaking =
-        listeningRef.current && peak > 24 && average > 3;
-
-      for (let i = 0; i < count; i++) {
-        const angle = (i / count) * Math.PI * 2 - Math.PI / 2;
-
-        const index = bins
-          ? Math.min(
-              bins.length - 1,
-              Math.floor(Math.pow(i / count, 1.7) * bins.length)
-            )
-          : 0;
-
-        const energy = speaking && bins ? bins[index] / 255 : 0;
-        const target = speaking
-          ? 3 + energy * 54 * bars[i].gain
-          : 3;
-
-        bars[i].value += (target - bars[i].value) * 0.2;
-
+      // Soft outer rings
+      [1.18, 1.27, 1.36].forEach((scale, i) => {
         ctx.beginPath();
-        ctx.moveTo(
-          cx + Math.cos(angle) * radius,
-          cy + Math.sin(angle) * radius
-        );
-        ctx.lineTo(
-          cx + Math.cos(angle) * (radius + bars[i].value),
-          cy + Math.sin(angle) * (radius + bars[i].value)
-        );
-
-        const hue = 190 + (i / count) * 85;
-        ctx.strokeStyle = `hsla(${hue},100%,62%,${0.65 + energy * 0.35})`;
-        ctx.lineWidth = 2.2;
-        ctx.lineCap = "round";
-        ctx.stroke();
-      }
-
-      const t = performance.now() * 0.00025;
-
-      [
-        { r: radius - 12, a: t * 0.6, c: "#00BFFF" },
-        { r: radius - 21, a: -t * 0.45, c: "#4169E1" },
-        { r: radius - 30, a: t * 0.3, c: "#655CFF" },
-      ].forEach((ring) => {
-        ctx.beginPath();
-        ctx.arc(cx, cy, ring.r, ring.a, ring.a + 1.5);
-        ctx.strokeStyle = ring.c;
-        ctx.lineWidth = 3;
-        ctx.lineCap = "round";
+        ctx.arc(cx, cy, baseRadius * scale, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(45, 125, 255, ${0.13 - i * 0.025})`;
+        ctx.lineWidth = 1.2;
         ctx.stroke();
       });
 
-      raf = requestAnimationFrame(render);
+      // Individually moving waveform bars
+      const bars = 120;
+
+      for (let i = 0; i < bars; i++) {
+        const angle = (i / bars) * Math.PI * 2;
+        const audioValue = data
+          ? data[Math.floor((i / bars) * data.length)] / 255
+          : 0;
+
+        const movement =
+          Math.sin(frame * 2.2 + i * 0.31) * 3 +
+          Math.cos(frame * 1.4 + i * 0.17) * 2;
+
+        const soundMovement = listening ? audioValue * 38 : 0;
+        const length = 4 + Math.max(0, movement) + soundMovement;
+
+        const inner = baseRadius;
+        const outer = inner + length;
+
+        const x1 = cx + Math.cos(angle) * inner;
+        const y1 = cy + Math.sin(angle) * inner;
+        const x2 = cx + Math.cos(angle) * outer;
+        const y2 = cy + Math.sin(angle) * outer;
+
+        const gradient = ctx.createLinearGradient(x1, y1, x2, y2);
+        gradient.addColorStop(0, "#287bff");
+        gradient.addColorStop(0.55, "#41c8ff");
+        gradient.addColorStop(1, "#9b6cff");
+
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.strokeStyle = gradient;
+        ctx.lineWidth = 2;
+        ctx.lineCap = "round";
+        ctx.stroke();
+      }
+
+      // Three rotating accent arcs
+      const colors = ["#287bff", "#35c9ff", "#9b6cff"];
+
+      colors.forEach((color, i) => {
+        ctx.beginPath();
+        ctx.arc(
+          cx,
+          cy,
+          baseRadius * (1.08 + i * 0.055),
+          frame * (i % 2 ? -0.8 : 0.8) + i,
+          frame * (i % 2 ? -0.8 : 0.8) + i + 0.75
+        );
+        ctx.strokeStyle = color;
+        ctx.globalAlpha = 0.7;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      });
+
+      animationRef.current = requestAnimationFrame(draw);
+    };
+
+    draw();
+
+    return () => {
+      window.removeEventListener("resize", resize);
+      cancelAnimationFrame(animationRef.current);
+    };
+  }, [listening]);
+
+  const stopVoice = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
     }
 
-    render();
-    return () => cancelAnimationFrame(raf);
-  }, [voiceOpen]);
+    if (audioRef.current) {
+      audioRef.current.close().catch(() => {});
+      audioRef.current = null;
+    }
 
-  async function startVoice() {
-    setNotice("");
+    analyserRef.current = null;
+    setListening(false);
+  };
 
+  const startVoice = async () => {
     try {
-      if (!navigator.mediaDevices?.getUserMedia) {
-        throw new Error("Microphone unavailable");
+      if (listening) {
+        stopVoice();
+        return;
       }
 
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -143,58 +159,31 @@ export default function App() {
       const AudioContextClass =
         window.AudioContext || window.webkitAudioContext;
 
-      const audio = new AudioContextClass();
-      audioRef.current = audio;
+      const audioContext = new AudioContextClass();
+      audioRef.current = audioContext;
 
-      const source = audio.createMediaStreamSource(stream);
-      const analyser = audio.createAnalyser();
+      const source = audioContext.createMediaStreamSource(stream);
+      const analyser = audioContext.createAnalyser();
 
-      analyser.fftSize = 512;
-      analyser.smoothingTimeConstant = 0.75;
-
+      analyser.fftSize = 256;
       source.connect(analyser);
       analyserRef.current = analyser;
+
       setListening(true);
-    } catch {
-      setNotice("Please allow microphone access to use Voice.");
-      setListening(false);
-    }
-  }
-
-  function stopVoice() {
-    setListening(false);
-
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-    }
-
-    streamRef.current = null;
-
-    if (audioRef.current) {
-      audioRef.current.close().catch(() => {});
-    }
-
-    audioRef.current = null;
-    analyserRef.current = null;
-  }
-
-  async function toggleVoice() {
-    if (voiceOpen) {
-      stopVoice();
-      setVoiceOpen(false);
-    } else {
       setVoiceOpen(true);
-      await startVoice();
+    } catch (error) {
+      setNotice("Please allow microphone access to use voice.");
     }
-  }
+  };
 
-  function chooseTool(tool) {
-    setPrompt(tool);
-    setNotice("");
-  }
+  const handleSend = () => {
+    if (!prompt.trim()) return;
+    setNotice("Your message is ready: " + prompt.trim());
+    setPrompt("");
+  };
 
   return (
-    <main className="findora">
+    <div className="findora">
       <style>{`
         * {
           box-sizing: border-box;
@@ -203,27 +192,29 @@ export default function App() {
         html, body, #root {
           margin: 0;
           width: 100%;
-          height: 100%;
+          min-height: 100%;
           background: #000;
         }
 
         body {
           font-family: Arial, Helvetica, sans-serif;
-          overflow: hidden;
+          color: white;
+        }
+
+        button {
+          font-family: inherit;
+          -webkit-tap-highlight-color: transparent;
         }
 
         .findora {
-          position: relative;
           width: 100%;
-          height: 100vh;
           height: 100dvh;
           min-height: 500px;
-          overflow: hidden;
           background: #000;
           color: #fff;
+          position: relative;
+          overflow: hidden;
         }
-
-        /* Top left and right controls */
 
         .topbar {
           position: absolute;
@@ -233,82 +224,78 @@ export default function App() {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          z-index: 5;
+          z-index: 10;
         }
 
         .iconbtn {
-          width: 48px;
-          height: 48px;
-          padding: 0;
-          display: grid;
-          place-items: center;
-          border: none;
+          width: 36px;
+          height: 36px;
+          border: 0;
+          border-radius: 50%;
           background: transparent;
-          color: white;
+          color: #fff;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          padding: 0;
           cursor: pointer;
         }
 
         .menu-icon {
-          width: 48px;
-          height: 48px;
-          fill: none;
-          stroke: white;
-          stroke-width: 3;
-          stroke-linecap: round;
+          width: 30px;
+          height: 30px;
+          display: block;
         }
 
         .profile-icon {
-          width: 45px;
-          height: 45px;
-          fill: none;
-          stroke: white;
-          stroke-width: 1.8;
-          stroke-linecap: round;
-          stroke-linejoin: round;
+          width: 32px;
+          height: 32px;
+          display: block;
         }
-
-        /* Centre logo */
 
         .center-stage {
           position: absolute;
           top: 35.6%;
           left: 50%;
           transform: translate(-50%, -50%);
-          display: grid;
-          place-items: center;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          width: 100%;
+          pointer-events: none;
         }
 
         .pulse-logo {
           width: min(30.2vw, 208px);
-          height: min(30.2vw, 208px);
+          aspect-ratio: 1;
           border-radius: 50%;
           background: #fff;
-          display: grid;
-          place-items: center;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          box-shadow: 0 0 35px rgba(45, 125, 255, 0.12);
         }
 
         .pulse-logo svg {
-          width: 76%;
+          width: 62%;
           height: 62%;
         }
-
-        /* Voice animation */
 
         .voice-stage {
           position: absolute;
           top: 35.6%;
           left: 50%;
           transform: translate(-50%, -50%);
-          display: grid;
-          place-items: center;
+          width: min(70vw, 300px);
+          aspect-ratio: 1;
+          pointer-events: none;
         }
 
         .voice-canvas {
-          width: min(70vw, 300px);
-          height: min(70vw, 300px);
+          width: 100%;
+          height: 100%;
+          display: block;
         }
-
-        /* Options at bottom left */
 
         .tool-list {
           position: absolute;
@@ -317,35 +304,27 @@ export default function App() {
           display: flex;
           flex-direction: column;
           gap: 25px;
+          z-index: 2;
         }
 
         .tool {
-          display: flex;
-          align-items: center;
-          gap: 22px;
+          border: 0;
           padding: 0;
-          border: none;
           background: transparent;
           color: #f5f5f5;
-          font-size: clamp(15px, 3.45vw, 23px);
-          font-weight: 400;
+          display: flex;
+          align-items: center;
+          gap: 13px;
           text-align: left;
-          white-space: nowrap;
+          font-size: clamp(15px, 3.45vw, 23px);
           cursor: pointer;
         }
 
         .tool svg {
           width: 47px;
           height: 47px;
-          flex: none;
-          fill: none;
-          stroke: white;
-          stroke-width: 1.8;
-          stroke-linecap: round;
-          stroke-linejoin: round;
+          flex-shrink: 0;
         }
-
-        /* ChatGPT-style chat section */
 
         .composer {
           position: absolute;
@@ -353,374 +332,324 @@ export default function App() {
           bottom: 4.2%;
           width: 76%;
           height: 88px;
-          border-radius: 55px;
-          background: #171717;
+          border: 1px solid #333;
+          border-radius: 28px;
+          background: #191919;
           display: flex;
           align-items: center;
-          justify-content: space-between;
-          gap: 5px;
-          padding: 7px 9px;
+          padding: 10px 12px;
+          gap: 10px;
+          z-index: 5;
         }
 
         .plus {
-          flex: none;
-          width: 48px;
-          height: 48px;
-          border: none;
+          width: 38px;
+          height: 38px;
+          border: 0;
+          border-radius: 50%;
           background: transparent;
-          color: white;
-          font-size: 39px;
-          font-weight: 300;
-          line-height: 1;
+          color: #fff;
+          font-size: 29px;
           cursor: pointer;
+          flex-shrink: 0;
         }
 
         .prompt {
           flex: 1;
-          width: 0;
           min-width: 0;
-          padding: 0 4px;
-          outline: none;
-          border: none;
+          border: 0;
+          outline: 0;
           background: transparent;
           color: white;
-          font-size: 17px;
+          font-size: 16px;
         }
 
         .prompt::placeholder {
-          color: #d0d0d0;
-          opacity: 1;
+          color: #999;
         }
 
         .smallbtn {
-          flex: none;
-          width: 39px;
-          height: 42px;
-          padding: 2px;
-          display: grid;
-          place-items: center;
-          border: none;
-          background: transparent;
-          color: white;
-          cursor: pointer;
-        }
-
-        .smallbtn svg {
-          width: 34px;
-          height: 34px;
-          fill: none;
-          stroke: white;
-          stroke-width: 1.8;
-          stroke-linecap: round;
-          stroke-linejoin: round;
-        }
-
-        .mic svg {
-          width: 33px;
-          height: 39px;
-        }
-
-        .voice-btn {
-          flex: none;
-          height: 72px;
-          padding: 0 15px;
-          border: none;
-          border-radius: 45px;
-          background: #0878f9;
+          width: 38px;
+          height: 38px;
+          border: 0;
+          border-radius: 50%;
+          background: #303030;
           color: white;
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 7px;
-          font-size: 18px;
-          white-space: nowrap;
           cursor: pointer;
+          flex-shrink: 0;
+        }
+
+        .mic {
+          width: 19px;
+          height: 19px;
+        }
+
+        .voice-btn {
+          height: 72px;
+          min-width: 72px;
+          border: 0;
+          border-radius: 23px;
+          background: #287bff;
+          color: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          padding: 0 17px;
+          gap: 8px;
+          flex-shrink: 0;
         }
 
         .voice-btn svg {
-          width: 39px;
-          height: 39px;
-          fill: none;
-          stroke: white;
-          stroke-width: 1.8;
-          stroke-linecap: round;
-          stroke-linejoin: round;
+          width: 30px;
+          height: 30px;
         }
-
-        .voice-btn.active {
-          background: #075dcc;
-        }
-
-        /* Pop-up menus */
 
         .popover {
           position: absolute;
-          top: 95px;
-          z-index: 10;
-          display: flex;
-          flex-direction: column;
-          gap: 14px;
-          padding: 15px 20px;
-          background: #1b1b1b;
+          top: 75px;
+          left: 4.1%;
+          background: #1c1c1c;
           border: 1px solid #333;
           border-radius: 14px;
-        }
-
-        .popover.left {
-          left: 5%;
+          padding: 14px;
+          min-width: 150px;
+          z-index: 20;
+          font-size: 14px;
         }
 
         .popover.right {
-          right: 5%;
-        }
-
-        .popover button {
-          padding: 5px;
-          border: none;
-          background: transparent;
-          color: white;
-          text-align: left;
-          font-size: 16px;
+          left: auto;
+          right: 4.1%;
         }
 
         .notice {
           position: absolute;
-          bottom: 1%;
-          left: 5%;
-          right: 5%;
-          color: #aaa;
+          bottom: 145px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: #222;
+          border: 1px solid #444;
+          border-radius: 12px;
+          padding: 10px 14px;
+          font-size: 13px;
+          max-width: 85%;
+          z-index: 30;
           text-align: center;
-          font-size: 12px;
         }
 
-        /* Smaller phones */
-
         @media (max-width: 380px) {
+          .tool-list {
+            left: 6%;
+            bottom: 13%;
+            gap: 17px;
+          }
+
+          .tool {
+            font-size: 14px;
+            gap: 10px;
+          }
+
+          .tool svg {
+            width: 36px;
+            height: 36px;
+          }
+
           .composer {
             left: 6%;
             width: 88%;
             height: 72px;
-            padding: 5px 7px;
-            gap: 2px;
+            bottom: 4%;
+            border-radius: 23px;
+            padding: 8px;
+            gap: 6px;
           }
 
-          .plus {
-            width: 36px;
-            font-size: 34px;
+          .voice-btn {
+            height: 58px;
+            min-width: 58px;
+            border-radius: 18px;
+            padding: 0 12px;
+          }
+
+          .voice-btn svg {
+            width: 26px;
+            height: 26px;
+          }
+
+          .plus, .smallbtn {
+            width: 32px;
+            height: 32px;
           }
 
           .prompt {
             font-size: 14px;
           }
-
-          .smallbtn {
-            width: 31px;
-          }
-
-          .smallbtn svg {
-            width: 28px;
-            height: 28px;
-          }
-
-          .voice-btn {
-            height: 58px;
-            padding: 0 9px;
-            gap: 4px;
-            font-size: 15px;
-          }
-
-          .voice-btn svg {
-            width: 29px;
-            height: 29px;
-          }
-
-          .tool {
-            gap: 14px;
-            font-size: 15px;
-          }
-
-          .tool svg {
-            width: 39px;
-            height: 39px;
-          }
         }
 
         @media (max-height: 700px) {
+          .center-stage, .voice-stage {
+            top: 32%;
+          }
+
           .tool-list {
             bottom: 14%;
-            gap: 12px;
+            gap: 14px;
           }
 
           .composer {
-            height: 65px;
-          }
-
-          .voice-btn {
-            height: 53px;
-          }
-
-          .center-stage,
-          .voice-stage {
-            top: 35%;
+            bottom: 3%;
           }
         }
       `}</style>
 
-      <header className="topbar">
+      <div className="topbar">
         <button
           className="iconbtn"
-          aria-label="Menu"
-          onClick={() => setMenuOpen(!menuOpen)}
+          onClick={() => {
+            setMenuOpen(!menuOpen);
+            setProfileOpen(false);
+          }}
+          aria-label="Open menu"
         >
-          <svg className="menu-icon" viewBox="0 0 48 48">
-            <path d="M5 9h38M5 24h38M5 39h38" />
+          <svg className="menu-icon" viewBox="0 0 48 48" fill="none">
+            <path
+              d="M8 14H40M8 24H40M8 34H40"
+              stroke="white"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+            />
           </svg>
         </button>
 
         <button
           className="iconbtn"
-          aria-label="Profile"
-          onClick={() => setProfileOpen(!profileOpen)}
+          onClick={() => {
+            setProfileOpen(!profileOpen);
+            setMenuOpen(false);
+          }}
+          aria-label="Open profile"
         >
-          <svg className="profile-icon" viewBox="0 0 64 64">
-            <path d="M12 29L18 28L23 13Q24 8 29 10Q37 13 43 10Q48 8 50 14L55 28L60 30L59 36L7 36L5 32Z" />
-            <path d="M9 31Q31 36 57 31" />
-            <circle cx="20" cy="44" r="9" />
-            <circle cx="44" cy="44" r="9" />
-            <path d="M29 44Q32 40 35 44" />
+          <svg className="profile-icon" viewBox="0 0 48 48" fill="none">
+            <path
+              d="M9 21L15 13L24 10L33 13L39 21L35 27H13L9 21Z"
+              stroke="white"
+              strokeWidth="2"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M15 29C15 25 19 23 24 23C29 23 33 25 33 29"
+              stroke="white"
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
+            <circle cx="19" cy="19" r="2" fill="white" />
+            <circle cx="29" cy="19" r="2" fill="white" />
           </svg>
         </button>
-      </header>
+      </div>
 
       {menuOpen && (
-        <div className="popover left">
-          <button onClick={() => setMenuOpen(false)}>New chat</button>
-          <button onClick={() => setMenuOpen(false)}>History</button>
-          <button onClick={() => setMenuOpen(false)}>Settings</button>
+        <div className="popover">
+          <div>New chat</div>
+          <p>History</p>
+          <p>Settings</p>
         </div>
       )}
 
       {profileOpen && (
         <div className="popover right">
-          <button onClick={() => setProfileOpen(false)}>Profile</button>
-          <button onClick={() => setProfileOpen(false)}>Settings</button>
+          <div>Profile</div>
+          <p>Settings</p>
         </div>
       )}
 
-      {voiceOpen ? (
-        <section className="voice-stage">
-          <canvas
-            ref={canvasRef}
-            className="voice-canvas"
-            width="500"
-            height="500"
-          />
-        </section>
-      ) : (
-        <section className="center-stage">
-          <div className="pulse-logo">
-            <svg viewBox="0 0 180 130">
-              <path
-                d="M8 66 C25 67 35 83 49 68 L61 54 L72 94 Q77 106 82 88 L91 36 Q95 17 100 45 L110 112 Q114 126 119 101 L131 28 Q136 5 141 40 L148 70 Q152 84 171 57"
-                fill="none"
-                stroke="#0878f9"
-                strokeWidth="9"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
-        </section>
-      )}
+      <div className="center-stage">
+        <div className="pulse-logo">
+          <svg viewBox="0 0 120 120" fill="none">
+            <path
+              d="M12 60H25L34 42L45 78L57 27L70 91L82 45L92 60H108"
+              stroke="#287bff"
+              strokeWidth="7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </div>
+      </div>
 
-      {!voiceOpen && (
-        <section className="tool-list">
-          <button
-            className="tool"
-            onClick={() => chooseTool("Create an image")}
-          >
-            <svg viewBox="0 0 48 48">
-              <rect x="4" y="4" width="40" height="40" rx="5" />
-              <circle cx="32" cy="15" r="4" />
-              <path d="M5 36l12-13 8 8 5-5 13 13" />
-            </svg>
-            Create an image
-          </button>
+      <div className="voice-stage">
+        <canvas ref={canvasRef} className="voice-canvas" />
+      </div>
 
-          <button
-            className="tool"
-            onClick={() => chooseTool("Translate language")}
-          >
-            <svg viewBox="0 0 48 48">
-              <path d="M5 7h25v23H18l-8 7v-7H5zM19 18h23v22h-7l-7 5v-5h-9" />
-              <path d="M12 14h11M17 11v3M14 23l5-7 5 7M31 26h7M34 23v3" />
-            </svg>
-            Translate language
-          </button>
+      <div className="tool-list">
+        <button className="tool" onClick={() => setNotice("Image creation selected")}>
+          <svg viewBox="0 0 48 48" fill="none">
+            <rect x="5" y="7" width="38" height="34" rx="7" stroke="white" strokeWidth="2" />
+            <circle cx="17" cy="18" r="4" stroke="white" strokeWidth="2" />
+            <path d="M8 35L20 25L28 32L34 26L41 34" stroke="white" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+          <span>Create an image</span>
+        </button>
 
-          <button
-            className="tool"
-            onClick={() => chooseTool("Search the web")}
-          >
-            <svg viewBox="0 0 48 48">
-              <circle cx="24" cy="24" r="20" />
-              <path d="M4 24h40M24 4c-12 11-12 29 0 40M24 4c12 11 12 29 0 40" />
-            </svg>
-            Search the web
-          </button>
-        </section>
-      )}
+        <button className="tool" onClick={() => setNotice("Language translation selected")}>
+          <svg viewBox="0 0 48 48" fill="none">
+            <path d="M7 11H29M18 7V11M12 16C15 24 22 29 29 32M28 16C25 24 18 29 11 32M12 16H29" stroke="white" strokeWidth="2" strokeLinecap="round" />
+            <path d="M27 39L34 21L41 39M30 32H38" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <span>Translate language</span>
+        </button>
+
+        <button className="tool" onClick={() => setNotice("Web search selected")}>
+          <svg viewBox="0 0 48 48" fill="none">
+            <circle cx="21" cy="21" r="13" stroke="white" strokeWidth="2" />
+            <path d="M31 31L41 41" stroke="white" strokeWidth="3" strokeLinecap="round" />
+            <path d="M8 21H34M21 8C16 14 16 28 21 34M21 8C26 14 26 28 21 34" stroke="white" strokeWidth="1.5" />
+          </svg>
+          <span>Search the web</span>
+        </button>
+      </div>
 
       <div className="composer">
-        <button
-          className="plus"
-          aria-label="More options"
-          onClick={() => setMenuOpen(!menuOpen)}
-        >
-          +
-        </button>
+        <button className="plus" onClick={() => setNotice("More options")}>+</button>
 
         <input
           className="prompt"
           value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          placeholder="Ask Chronicle"
+          onChange={(event) => setPrompt(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") handleSend();
+          }}
+          placeholder="Ask anything"
         />
 
-        <button
-          className="smallbtn"
-          aria-label="Emoji"
-          onClick={() => setPrompt((p) => p + " 🙂")}
-        >
-          <svg viewBox="0 0 40 40">
-            <circle cx="20" cy="20" r="16" />
-            <path d="M14 24s2 5 6 5 6-5 6-5M14 15h.1M26 15h.1" />
+        <button className="smallbtn" onClick={handleSend} aria-label="Send message">
+          <svg viewBox="0 0 24 24" fill="none" className="mic">
+            <path d="M12 15V4M8 8V12C8 17 16 17 16 12V8M5 12C5 21 19 21 19 12" stroke="white" strokeWidth="2" strokeLinecap="round" />
           </svg>
         </button>
 
-        <button
-          className="smallbtn mic"
-          aria-label="Microphone"
-          onClick={toggleVoice}
-        >
-          <svg viewBox="0 0 40 44">
-            <rect x="13" y="3" width="14" height="25" rx="7" />
-            <path d="M7 21a13 13 0 0 0 26 0M20 34v7M14 41h12" />
+        <button className="voice-btn" onClick={startVoice} aria-label="Start voice">
+          <svg viewBox="0 0 48 48" fill="none">
+            <path
+              d="M5 24H10L14 13L19 35L24 9L29 39L34 17L38 24H43"
+              stroke="white"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           </svg>
-        </button>
-
-        <button
-          className={`voice-btn ${voiceOpen ? "active" : ""}`}
-          onClick={toggleVoice}
-        >
-          <svg viewBox="0 0 40 40">
-            <path d="M2 21h5l4-10 5 20 5-25 5 28 5-17 4 4h3" />
-          </svg>
-          {voiceOpen ? "Close" : "Voice"}
         </button>
       </div>
 
-      {notice && <p className="notice">{notice}</p>}
-    </main>
+      {notice && (
+        <div className="notice" onClick={() => setNotice("")}>
+          {notice}
+        </div>
+      )}
+    </div>
   );
 }
