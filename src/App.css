@@ -1,28 +1,28 @@
 
 .composer {
   position: absolute;
-  left: 5%;
-  bottom: 3%;
-  width: 90%;
+  left: 10%;
+  bottom: 4%;
+  width: 76%;
   height: 48px;
   box-sizing: border-box;
   display: flex;
   align-items: center;
-  gap: 2px;
-  padding: 4px 6px;
-  background: #212121;
-  border: 1px solid #383838;
-  border-radius: 26px;
+  gap: 5px;
+  padding: 4px 7px;
+  background: #191919;
+  border: 1px solid #292929;
+  border-radius: 50px;
 }
 
 .composer .plus {
-  flex: 0 0 29px;
-  height: 36px;
+  flex: 0 0 32px;
+  height: 40px;
   padding: 0;
   background: transparent;
   border: none;
   color: white;
-  font-size: 25px;
+  font-size: 32px;
 }
 
 .composer .prompt {
@@ -43,8 +43,9 @@
 }
 
 .composer .smallbtn {
-  flex: 0 0 25px;
-  height: 36px;
+  flex: 0 0 27px;
+  width: 27px;
+  height: 38px;
   padding: 0;
   background: transparent;
   border: none;
@@ -54,34 +55,65 @@
 }
 
 .composer .smallbtn svg {
-  width: 18px;
-  height: 18px;
+  width: 21px;
+  height: 21px;
   fill: none;
   stroke: white;
   stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .composer .voice-btn {
   flex: 0 0 76px;
   width: 76px;
   min-width: 76px;
-  height: 38px;
+  height: 35px;
   padding: 0 5px;
   border: none;
-  border-radius: 22px;
+  border-radius: 30px;
   background: #2879f5;
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 4px;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .composer .voice-btn svg {
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   fill: none;
   stroke: white;
   stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+@media (max-width: 380px) {
+  .composer {
+    left: 10%;
+    width: 80%;
+    height: 48px;
+    gap: 3px;
+    padding: 4px 5px;
+  }
+
+  .composer .plus {
+    flex-basis: 29px;
+    font-size: 29px;
+  }
+
+  .composer .smallbtn {
+    flex-basis: 25px;
+    width: 25px;
+  }
+
+  .composer .voice-btn {
+    flex-basis: 74px;
+    width: 74px;
+    min-width: 74px;
+    font-size: 12px;
+  }
 }
