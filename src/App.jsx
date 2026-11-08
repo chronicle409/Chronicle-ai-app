@@ -8,6 +8,7 @@ export default function App() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [prompt, setPrompt] = useState("");
   const [notice, setNotice] = useState("");
+
   const canvasRef = useRef(null);
   const analyserRef = useRef(null);
   const audioRef = useRef(null);
@@ -51,7 +52,6 @@ export default function App() {
 
       frame += 0.012;
 
-      // Soft outer rings
       [1.18, 1.27, 1.36].forEach((scale, i) => {
         ctx.beginPath();
         ctx.arc(cx, cy, baseRadius * scale, 0, Math.PI * 2);
@@ -60,7 +60,6 @@ export default function App() {
         ctx.stroke();
       });
 
-      // Individually moving waveform bars
       const bars = 120;
 
       for (let i = 0; i < bars; i++) {
@@ -98,7 +97,6 @@ export default function App() {
         ctx.stroke();
       }
 
-      // Three rotating accent arcs
       const colors = ["#287bff", "#35c9ff", "#9b6cff"];
 
       colors.forEach((color, i) => {
@@ -326,30 +324,31 @@ export default function App() {
           flex-shrink: 0;
         }
 
+        /* BOTTOM CHAT SECTION */
         .composer {
           position: absolute;
-          left: 10.2%;
-          bottom: 4.2%;
-          width: 76%;
-          height: 88px;
+          left: 5%;
+          bottom: 2.5%;
+          width: 90%;
+          height: 66px;
           border: 1px solid #333;
-          border-radius: 28px;
+          border-radius: 24px;
           background: #191919;
           display: flex;
           align-items: center;
-          padding: 10px 12px;
-          gap: 10px;
+          padding: 6px 10px;
+          gap: 7px;
           z-index: 5;
         }
 
         .plus {
-          width: 38px;
-          height: 38px;
+          width: 34px;
+          height: 34px;
           border: 0;
           border-radius: 50%;
           background: transparent;
           color: #fff;
-          font-size: 29px;
+          font-size: 26px;
           cursor: pointer;
           flex-shrink: 0;
         }
@@ -361,7 +360,7 @@ export default function App() {
           outline: 0;
           background: transparent;
           color: white;
-          font-size: 16px;
+          font-size: 15px;
         }
 
         .prompt::placeholder {
@@ -369,8 +368,8 @@ export default function App() {
         }
 
         .smallbtn {
-          width: 38px;
-          height: 38px;
+          width: 36px;
+          height: 36px;
           border: 0;
           border-radius: 50%;
           background: #303030;
@@ -383,29 +382,28 @@ export default function App() {
         }
 
         .mic {
-          width: 19px;
-          height: 19px;
+          width: 18px;
+          height: 18px;
         }
 
         .voice-btn {
-          height: 72px;
-          min-width: 72px;
+          height: 52px;
+          min-width: 52px;
           border: 0;
-          border-radius: 23px;
+          border-radius: 17px;
           background: #287bff;
           color: white;
           display: flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
-          padding: 0 17px;
-          gap: 8px;
+          padding: 0 10px;
           flex-shrink: 0;
         }
 
         .voice-btn svg {
-          width: 30px;
-          height: 30px;
+          width: 26px;
+          height: 26px;
         }
 
         .popover {
@@ -459,34 +457,39 @@ export default function App() {
           }
 
           .composer {
-            left: 6%;
-            width: 88%;
-            height: 72px;
-            bottom: 4%;
-            border-radius: 23px;
-            padding: 8px;
-            gap: 6px;
+            left: 5%;
+            width: 90%;
+            height: 66px;
+            bottom: 2.5%;
+            border-radius: 24px;
+            padding: 6px 8px;
+            gap: 5px;
           }
 
           .voice-btn {
-            height: 58px;
-            min-width: 58px;
-            border-radius: 18px;
-            padding: 0 12px;
+            height: 52px;
+            min-width: 52px;
+            border-radius: 17px;
+            padding: 0 8px;
           }
 
           .voice-btn svg {
-            width: 26px;
-            height: 26px;
+            width: 25px;
+            height: 25px;
           }
 
-          .plus, .smallbtn {
+          .plus {
+            width: 30px;
+            height: 30px;
+          }
+
+          .smallbtn {
             width: 32px;
             height: 32px;
           }
 
           .prompt {
-            font-size: 14px;
+            font-size: 13px;
           }
         }
 
@@ -501,7 +504,7 @@ export default function App() {
           }
 
           .composer {
-            bottom: 3%;
+            bottom: 2.5%;
           }
         }
       `}</style>
