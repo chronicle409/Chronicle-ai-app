@@ -1,82 +1,134 @@
 
-/* BOTTOM CHAT SECTION */
 .composer {
   position: absolute;
-  left: 6%;
-  bottom: 3%;
-  width: 88%;
-  height: 76px;
-  border: 1px solid #333;
-  border-radius: 25px;
-  background: #191919;
+  left: 10.2%;
+  bottom: 4.2%;
+  width: 75.2%;
+  height: 88px;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
-  padding: 7px 9px;
-  gap: 7px;
-  z-index: 5;
+  gap: 8px;
+  padding: 8px 10px;
+  background: #202020;
+  border: 1px solid #292929;
+  border-radius: 50px;
 }
 
 .plus {
-  width: 36px;
-  height: 36px;
-  border: 0;
-  border-radius: 50%;
-  background: transparent;
-  color: #fff;
-  font-size: 27px;
-  cursor: pointer;
+  width: 40px;
+  height: 48px;
   flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: white;
+  font-size: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .prompt {
   flex: 1;
   min-width: 0;
-  border: 0;
-  outline: 0;
-  background: transparent;
   color: white;
-  font-size: 15px;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 16px;
 }
 
 .prompt::placeholder {
-  color: #999;
+  color: #eeeeee;
+  opacity: 1;
 }
 
 .smallbtn {
-  width: 38px;
-  height: 38px;
-  border: 0;
-  border-radius: 50%;
-  background: #303030;
+  width: 40px;
+  height: 48px;
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  flex-shrink: 0;
 }
 
-.mic {
-  width: 19px;
-  height: 19px;
+.smallbtn svg {
+  width: 27px;
+  height: 27px;
+  fill: none;
+  stroke: white;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .voice-btn {
-  height: 60px;
-  min-width: 60px;
-  border: 0;
-  border-radius: 20px;
-  background: #287bff;
+  height: 64px;
+  min-width: 142px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 40px;
+  background: #2879f5;
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  padding: 0 12px;
-  flex-shrink: 0;
+  gap: 10px;
+  padding: 0 13px;
+  font-size: 17px;
 }
 
 .voice-btn svg {
   width: 28px;
   height: 28px;
+  fill: none;
+  stroke: white;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+@media (max-width: 380px) {
+  .composer {
+    left: 7%;
+    width: 86%;
+    height: 76px;
+    bottom: 4.2%;
+    gap: 4px;
+    padding: 6px 8px;
+  }
+
+  .plus {
+    width: 32px;
+    font-size: 34px;
+  }
+
+  .prompt {
+    font-size: 14px;
+  }
+
+  .smallbtn {
+    width: 32px;
+  }
+
+  .smallbtn svg {
+    width: 23px;
+    height: 23px;
+  }
+
+  .voice-btn {
+    min-width: 105px;
+    height: 56px;
+    gap: 6px;
+    padding: 0 9px;
+    font-size: 15px;
+  }
+
+  .voice-btn svg {
+    width: 23px;
+    height: 23px;
+  }
 }
