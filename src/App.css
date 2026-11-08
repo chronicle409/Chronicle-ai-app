@@ -1,63 +1,66 @@
 
 .composer {
   position: absolute;
-  left: 10.2%;
-  bottom: 4.2%;
-  width: 75.2%;
-  height: 88px;
+  left: 10%;
+  bottom: 4.5%;
+  width: 76%;
+  height: 58px;
   box-sizing: border-box;
+
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
+  gap: 5px;
+
+  padding: 5px 7px;
   background: #202020;
   border: 1px solid #292929;
-  border-radius: 50px;
+  border-radius: 40px;
 }
 
-.plus {
-  width: 40px;
-  height: 48px;
-  flex-shrink: 0;
-  border: none;
+.composer .plus {
+  flex: 0 0 35px;
+  width: 35px;
+  height: 42px;
+  padding: 0;
   background: transparent;
+  border: none;
   color: white;
-  font-size: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  font-size: 34px;
 }
 
-.prompt {
+.composer .prompt {
   flex: 1;
   min-width: 0;
-  color: white;
+  height: 100%;
+  padding: 0 3px;
   background: transparent;
   border: none;
   outline: none;
-  font-size: 16px;
+  color: white;
+  font-size: 15px;
 }
 
-.prompt::placeholder {
-  color: #eeeeee;
+.composer .prompt::placeholder {
+  color: #eee;
   opacity: 1;
 }
 
-.smallbtn {
-  width: 40px;
-  height: 48px;
-  flex-shrink: 0;
-  border: none;
+.composer .smallbtn {
+  flex: 0 0 30px;
+  width: 30px;
+  height: 42px;
+  padding: 0;
   background: transparent;
+  border: none;
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.smallbtn svg {
-  width: 27px;
-  height: 27px;
+.composer .smallbtn svg {
+  width: 23px;
+  height: 23px;
   fill: none;
   stroke: white;
   stroke-width: 1.8;
@@ -65,28 +68,30 @@
   stroke-linejoin: round;
 }
 
-.voice-btn {
-  height: 64px;
-  min-width: 142px;
-  flex-shrink: 0;
+.composer .voice-btn {
+  flex: 0 0 88px;
+  width: 88px;
+  min-width: 88px;
+  height: 46px;
+  padding: 0 7px;
   border: none;
-  border-radius: 40px;
+  border-radius: 30px;
   background: #2879f5;
   color: white;
+
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 0 13px;
-  font-size: 17px;
+  gap: 5px;
+  font-size: 14px;
 }
 
-.voice-btn svg {
-  width: 28px;
-  height: 28px;
+.composer .voice-btn svg {
+  width: 22px;
+  height: 22px;
   fill: none;
   stroke: white;
-  stroke-width: 1.7;
+  stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
@@ -95,40 +100,26 @@
   .composer {
     left: 7%;
     width: 86%;
-    height: 76px;
-    bottom: 4.2%;
-    gap: 4px;
-    padding: 6px 8px;
+    height: 58px;
+    bottom: 4.5%;
+    gap: 3px;
+    padding: 5px;
   }
 
-  .plus {
-    width: 32px;
-    font-size: 34px;
+  .composer .plus {
+    flex-basis: 30px;
+    width: 30px;
   }
 
-  .prompt {
-    font-size: 14px;
+  .composer .smallbtn {
+    flex-basis: 27px;
+    width: 27px;
   }
 
-  .smallbtn {
-    width: 32px;
-  }
-
-  .smallbtn svg {
-    width: 23px;
-    height: 23px;
-  }
-
-  .voice-btn {
-    min-width: 105px;
-    height: 56px;
-    gap: 6px;
-    padding: 0 9px;
-    font-size: 15px;
-  }
-
-  .voice-btn svg {
-    width: 23px;
-    height: 23px;
+  .composer .voice-btn {
+    flex-basis: 82px;
+    width: 82px;
+    min-width: 82px;
+    font-size: 13px;
   }
 }
